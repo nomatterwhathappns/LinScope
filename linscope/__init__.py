@@ -1,2 +1,2 @@
 """LinScope: evidence-based, read-only Linux configuration checks."""
-__version__ = "1.1"
+__version__ = "1.2"

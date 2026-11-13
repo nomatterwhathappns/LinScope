@@ -35,7 +35,7 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage through v1.1
+## Coverage through v1.2
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
@@ -53,6 +53,12 @@ linscope --version
   remote-reachability tests or complete firewall-rule simulations.
 * **Services:** running/enabled services and sockets, selected legacy-service
   names, and failed service inventory on systemd hosts.
+* **Kernel:** live forwarding/redirect sysctls, ASLR, kernel log/pointer access,
+  protected links, and ptrace restrictions. Router and container roles matter.
+* **Packages:** installed count, local APT metadata age, cached upgrade simulation,
+  and reboot-marker hints. No metadata is downloaded and no CVEs are inferred.
+* **Logging:** common logging services, journald storage/retention configuration,
+  log-directory/rotation configuration permissions, auditd, and reported time sync.
 
 The primary target is Ubuntu/Debian. Other distributions and containers may
 produce `UNKNOWN` or `SKIP`; support must be verified before relying on results.

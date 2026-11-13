@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2
+
+* Add live kernel/sysctl, Debian/Ubuntu package-cache, and logging/audit checks.
+* Treat stale/missing package metadata as incomplete coverage rather than
+  declaring a host current. Never download metadata or apply upgrades.
+* Review effective journald scalar settings and runtime time-sync reports.
+
 ## 1.1
 
 * Add authentication, network/firewall, and systemd service checks.
