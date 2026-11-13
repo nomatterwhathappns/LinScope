@@ -9,7 +9,7 @@ a guarantee that a host is secure.
 
 [Learning guide (Bahasa Indonesia)](docs/BELAJAR.md) ·
 [Check catalog](docs/CHECKS.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Synthetic example](examples/report.json) · [Changelog](CHANGELOG.md)
+[Terminal usage](docs/CLI.md) · [Synthetic example](examples/report.json) · [Changelog](CHANGELOG.md)
 
 ## Quick start
 
@@ -44,7 +44,7 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage through v1.5
+## Coverage through v1.6
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
@@ -195,6 +195,22 @@ or a transition to UNKNOWN/SKIP never counts as a fix. Changes in evidence,
 severity, or exception metadata remain visible. It is a snapshot comparison,
 not a continuously running monitor.
 
+## Display, preflight, and history
+
+```bash
+linscope --preflight
+linscope --status WARN --status FAIL --sort severity
+linscope --summary --progress
+linscope --history-dir reports/history --compare-latest --summary
+linscope --history-dir reports/history --history-list
+```
+
+Everything operates from the terminal. Browser use is optional for generated
+HTML reports, which now support offline search/filter/sort and collapsible
+details. Display filters never change canonical JSON/history or exit gates.
+History is opt-in, private, and locally stored. See [Terminal usage](docs/CLI.md)
+for scope, compatibility, limits, and examples.
+
 ## Development
 
 ```bash
@@ -210,7 +226,7 @@ release; validate on your target VM before operational use.
 
 ## Checkpoint workflow
 
-All checkpoints are on `main`: `v1.0`, `v1.1`, `v1.2`, `v1.3`, `v1.4`.
+All checkpoints are on `main`, tagged sequentially from `v1.0` through `v1.6`.
 To study a completed version without moving main:
 
 ```bash

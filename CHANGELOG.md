@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6
+
+* Add display-only status/severity/category filtering, deterministic sorting,
+  priority summaries, and optional stderr progress. Canonical JSON, history,
+  evidence, and exit gates remain complete.
+* Add advisory preflight command/access discovery without running audit commands.
+* Add private opt-in local history, offline listing, and latest-compatible
+  comparison; require matching host, profile, parameters and collection scope.
+* Add offline HTML search/filter/sort and collapsible details with hashed static
+  script CSP; all evidence is available when JavaScript is disabled.
+
 ## 1.5
 
 * Evaluate explicit SSH user/address/host Match contexts with stable target IDs.

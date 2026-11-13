@@ -9,15 +9,19 @@ import platform
 import sys
 
 from linscope import __version__
-from linscope.core import Context, SEVERITIES, unavailable
+from linscope.core import Context, SEVERITIES, STATUSES, unavailable
+from linscope.history import latest_compatible, list_history, save_report
 from linscope.policy import apply_exceptions, load_policy, parse_ssh_context, validate_ssh_contexts, validate_users
 from linscope.registry import CHECKS
-from linscope.reporting import compare_reports, render_html, render_json, render_text
+from linscope.preflight import inspect_capabilities, render_preflight_text
+from linscope.reporting import _plain, compare_reports, render_html, render_json, render_text
 
 
 def collect(ctx, categories):
     findings = []
-    for category in categories:
+    for number, category in enumerate(categories, 1):
+        if getattr(ctx, "progress", False):
+            print(f"[{number}/{len(categories)}] Checking {category}", file=sys.stderr)
         try:
             findings.extend(CHECKS[category](ctx))
         except Exception as exc:
@@ -104,9 +108,26 @@ def main(argv=None):
     parser.add_argument("--sudo-user", action="append", metavar="USER", help="List effective sudo policy for a selected user without executing grants (repeatable).")
     parser.add_argument("--honor-exceptions", action="store_true", help="Exclude active policy exceptions from --fail-on only; findings remain visible.")
     parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"), help="Compare compatible JSON reports offline (text/JSON output).")
+    parser.add_argument("--status", action="append", choices=STATUSES, help="Display only this status (repeatable); exit gates and stored JSON/history stay complete.")
+    parser.add_argument("--min-severity", choices=SEVERITIES, help="Display findings at or above this severity.")
+    parser.add_argument("--view-category", choices=sorted(CHECKS), help="Display one category without changing collected scope.")
+    parser.add_argument("--sort", choices=("id", "severity", "status", "category"), help="Sort the display (default: id).")
+    parser.add_argument("--summary", action="store_true", help="Show counts, priority review, and coverage without detailed evidence.")
+    parser.add_argument("--progress", action="store_true", help="Write category progress to stderr, keeping JSON stdout clean.")
+    parser.add_argument("--preflight", action="store_true", help="Inspect available commands and representative read access without scanning.")
+    parser.add_argument("--history-dir", metavar="PATH", help="Save complete JSON snapshots in an opt-in private local directory.")
+    parser.add_argument("--history-list", action="store_true", help="List saved snapshots from --history-dir without scanning.")
+    parser.add_argument("--compare-latest", action="store_true", help="Compare with the latest compatible snapshot before saving this scan.")
     args = parser.parse_args(argv)
+    view_active = bool(args.status or args.min_severity or args.view_category or args.sort or args.summary)
+    if args.format == "json" and view_active:
+        parser.error("JSON reports are always complete; display filters/sorting/summary require text or HTML")
+    if (args.history_list or args.compare_latest) and not args.history_dir:
+        parser.error("--history-list and --compare-latest require --history-dir")
+    scan_options = bool(args.profile or args.category or args.deep or args.policy or args.fail_on or args.fail_on_unknown
+                        or args.honor_exceptions or args.ssh_context or args.sudo_user or args.progress)
     if args.compare:
-        if args.profile or args.category or args.deep or args.policy or args.fail_on or args.fail_on_unknown or args.honor_exceptions or args.list_categories or args.ssh_context or args.sudo_user:
+        if scan_options or args.list_categories or args.preflight or args.history_dir or args.history_list or args.compare_latest or view_active:
             parser.error("--compare cannot be combined with live-check or policy options")
         if args.format == "html":
             parser.error("--compare supports --format text or json; HTML is available for scan reports")
@@ -116,13 +137,31 @@ def main(argv=None):
             write_output(content, args.output)
             return 0
         except (OSError, ValueError, RecursionError) as exc:
-            print(f"linscope: {exc}", file=sys.stderr)
+            print(_plain(f"linscope: {exc}"), file=sys.stderr)
+            return 2
+    if args.history_list:
+        if scan_options or args.preflight or args.compare_latest or args.list_categories or view_active or args.format == "html":
+            parser.error("--history-list supports text/JSON output and cannot be combined with scan options")
+        try:
+            entries = list_history(args.history_dir)
+            if args.format == "json":
+                content = json.dumps({"kind": "history", "entries": entries}, indent=2, ensure_ascii=True) + "\n"
+            else:
+                rows = ["LinScope / Local report history (newest saved first)"]
+                rows.extend(f"{row['name']} | {row['host']} | {row['profile']} | v{row['version']} | {row['findings_count']} findings" for row in entries)
+                content = "\n".join(rows + ([] if entries else ["No saved snapshots."])) + "\n"
+            write_output(content, args.output)
+            return 0
+        except (OSError, ValueError, RecursionError) as exc:
+            print(_plain(f"linscope: {exc}"), file=sys.stderr)
             return 2
     if args.list_categories:
         print("\n".join(CHECKS))
         return 0
     if args.honor_exceptions and not (args.policy and args.fail_on):
         parser.error("--honor-exceptions requires both --policy and --fail-on")
+    if args.preflight and (args.history_dir or args.compare_latest or args.fail_on or args.fail_on_unknown or args.honor_exceptions or view_active or args.format == "html"):
+        parser.error("--preflight supports text/JSON capability output; scan gates, history and display filters do not apply")
     if platform.system() != "Linux":
         parser.error("Live checks require Linux. Reports and source can be inspected on other platforms.")
     try:
@@ -134,16 +173,42 @@ def main(argv=None):
         for key, value in (("baseline", policy.get("baseline", {})), ("ssh_contexts", ssh_contexts), ("sudo_users", sudo_users)):
             if value:
                 context_options[key] = value
-        report = collect(Context(**context_options), categories)
+        ctx = Context(**context_options)
+        if args.preflight:
+            capabilities = inspect_capabilities(ctx, categories)
+            content = json.dumps(capabilities, indent=2, ensure_ascii=True) + "\n" if args.format == "json" else render_preflight_text(capabilities)
+            write_output(content, args.output)
+            return 0
+        if args.progress:
+            ctx.progress = True
+        report = collect(ctx, categories)
         if args.policy:
             report["findings"] = apply_exceptions(report["findings"], policy)
             emitted = {f["id"] for f in report["findings"]}
             unmatched = sorted(set(policy.get("exceptions", {})) - emitted)
             report["policy_warnings"] = [f"Exception {check_id} was not evaluated: ID absent from the selected report (excluded scope, unavailable evidence, or a typo)." for check_id in unmatched]
-        rendered = {"text": render_text, "json": render_json, "html": render_html}[args.format](report)
+        if args.compare_latest:
+            previous = latest_compatible(args.history_dir, report)
+            if previous is None:
+                report["history_note"] = "No compatible previous snapshot was found; this scan establishes the selected history baseline."
+            else:
+                report["comparison"] = compare_reports(previous, report)
+        view_options = {}
+        for key, value in (("statuses", args.status), ("min_severity", args.min_severity),
+                           ("categories", [args.view_category] if args.view_category else None),
+                           ("sort_by", args.sort), ("summary_only", args.summary)):
+            if value:
+                view_options[key] = value
+        if args.format == "json":
+            rendered = render_json(report)
+        else:
+            rendered = {"text": render_text, "html": render_html}[args.format](report, **view_options)
         write_output(rendered, args.output)
+        if args.history_dir:
+            saved = save_report(args.history_dir, report)
+            print(_plain(f"History saved: {saved}"), file=sys.stderr)
     except (OSError, ValueError, RecursionError) as exc:
-        print(f"linscope: {exc}", file=sys.stderr)
+        print(_plain(f"linscope: {exc}"), file=sys.stderr)
         return 2
     if args.fail_on_unknown and any(f["status"] == "UNKNOWN" for f in report["findings"]):
         return 2

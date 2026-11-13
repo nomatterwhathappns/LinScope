@@ -1,6 +1,6 @@
 # Check catalog
 
-Twelve categories, with stable IDs for both checks and inventory findings. Some
+Fourteen categories, with stable IDs for both checks and inventory findings. Some
 IDs are conditional: SSH-000 replaces unavailable/default-path SSH evaluation.
 A numeric ID count is not a measure of coverage or host security. See the module
 docstrings and emitted evidence for each check's exact scope.
@@ -179,3 +179,31 @@ and failed collection remain visible rather than producing a clean result.
 Deep search is optional and limited to documented directories. No full-disk,
 remote port, application vulnerability, cloud IAM, or effective ACL scan is
 performed. Report scope records category selection and whether deep search ran.
+
+## acl
+
+[Implementation](../linscope/checks/acl.py)
+
+`ACL-<12 uppercase hex>-001` evaluates mask-aware target access for conventional
+passwd/group/shadow/gshadow/sudoers/sshd_config and the SSH directory. The target
+hash is SHA256 of its absolute path, truncated to twelve uppercase hex digits.
+`-002` reviews directory default ACL inheritance. Group membership, parent ACLs,
+NFSv4 ACLs, and alternate locations are outside this category.
+
+## sudo
+
+[Implementation](../linscope/checks/sudo.py)
+
+`SUDO-<12 uppercase hex>-001` inventories the evaluated noninteractive listing;
+`-002` reviews explicit passwordless grants and `-003` reviews broad ALL grants.
+The hash derives from the exact selected username. `SUDO-000` indicates invalid
+or unavailable identity scope. Raw command arguments are never stored and no
+granted command is executed. No broad privilege-safety PASS is inferred.
+
+## Explicit SSH contexts and custom baselines
+
+`SSHCTX-<12 uppercase hex>-001..007` apply SSH checks to an explicit normalized
+connection context; `-000` records a collection failure for that context. The
+hash derives from canonical sorted JSON. Default SSH IDs remain unchanged.
+Supported baseline options are documented in the README and custom policy
+example. Their effective values are included in evidence and report scope.
