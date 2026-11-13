@@ -11,7 +11,7 @@ import sys
 from linscope import __version__
 from linscope.core import Context, SEVERITIES, STATUSES, unavailable
 from linscope.history import latest_compatible, list_history, save_report
-from linscope.policy import apply_exceptions, load_policy, parse_ssh_context, validate_ssh_contexts, validate_users
+from linscope.policy import apply_exceptions, load_policy, parse_ssh_context, validate_paths, validate_service_units, validate_ssh_contexts, validate_users
 from linscope.registry import CHECKS
 from linscope.preflight import inspect_capabilities, render_preflight_text
 from linscope.reporting import _plain, compare_reports, render_html, render_json, render_text
@@ -42,6 +42,8 @@ def collect(ctx, categories):
         "findings": [finding.to_dict() for finding in findings],
     }
     parameters = {key: getattr(ctx, key) for key in ("baseline", "ssh_contexts", "sudo_users", "user_paths", "service_units") if getattr(ctx, key, None)}
+    if "userfiles" in categories or ("sudo" in categories and not getattr(ctx, "sudo_users", None)):
+        parameters["identity_uid"] = os.getuid()
     if parameters:
         report["scope"]["parameters"] = parameters
     return report
@@ -106,6 +108,8 @@ def main(argv=None):
     parser.add_argument("--policy", metavar="JSON", help="Load declarative profile/categories and expiring exceptions.")
     parser.add_argument("--ssh-context", action="append", metavar="USER_ADDR_HOST", help="Evaluate SSH Match context: user=alice,addr=192.0.2.1,host=client.example (repeatable).")
     parser.add_argument("--sudo-user", action="append", metavar="USER", help="List effective sudo policy for a selected user without executing grants (repeatable).")
+    parser.add_argument("--service-unit", action="append", metavar="UNIT.service", help="Inspect selected system service hardening properties (repeatable; otherwise bounded running-service discovery).")
+    parser.add_argument("--user-path", action="append", metavar="ABSOLUTE_PATH", help="Review additional user credential/configuration metadata without reading contents (repeatable).")
     parser.add_argument("--honor-exceptions", action="store_true", help="Exclude active policy exceptions from --fail-on only; findings remain visible.")
     parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"), help="Compare compatible JSON reports offline (text/JSON output).")
     parser.add_argument("--status", action="append", choices=STATUSES, help="Display only this status (repeatable); exit gates and stored JSON/history stay complete.")
@@ -125,7 +129,7 @@ def main(argv=None):
     if (args.history_list or args.compare_latest) and not args.history_dir:
         parser.error("--history-list and --compare-latest require --history-dir")
     scan_options = bool(args.profile or args.category or args.deep or args.policy or args.fail_on or args.fail_on_unknown
-                        or args.honor_exceptions or args.ssh_context or args.sudo_user or args.progress)
+                        or args.honor_exceptions or args.ssh_context or args.sudo_user or args.progress or args.service_unit or args.user_path)
     if args.compare:
         if scan_options or args.list_categories or args.preflight or args.history_dir or args.history_list or args.compare_latest or view_active:
             parser.error("--compare cannot be combined with live-check or policy options")
@@ -169,8 +173,11 @@ def main(argv=None):
         categories = list(dict.fromkeys(args.category or policy.get("checks") or CHECKS))
         ssh_contexts = validate_ssh_contexts([parse_ssh_context(value) for value in args.ssh_context]) if args.ssh_context else policy.get("ssh_contexts", [])
         sudo_users = validate_users(args.sudo_user) if args.sudo_user else policy.get("sudo_users", [])
+        user_paths = validate_paths(args.user_path) if args.user_path else policy.get("user_paths", [])
+        service_units = validate_service_units(args.service_unit) if args.service_unit else policy.get("service_units", [])
         context_options = {"profile": args.profile or policy.get("profile", "server"), "deep": args.deep}
-        for key, value in (("baseline", policy.get("baseline", {})), ("ssh_contexts", ssh_contexts), ("sudo_users", sudo_users)):
+        for key, value in (("baseline", policy.get("baseline", {})), ("ssh_contexts", ssh_contexts), ("sudo_users", sudo_users),
+                           ("user_paths", user_paths), ("service_units", service_units)):
             if value:
                 context_options[key] = value
         ctx = Context(**context_options)

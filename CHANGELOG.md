@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.7
+
+* Expand to 17 categories with systemd service-hardening properties, conventional
+  local Docker socket/running-container configuration, and user credential-file metadata.
+* Support explicit service-unit and absolute user-path selections in CLI/policy.
+  Record target selections and current-account UID where identity affects scope.
+* Bound automatic service/container discovery and keep missing properties,
+  unsupported tools, permissions and namespace ambiguity visible.
+* Project only selected Docker fields; never capture full inspect/environment
+  data. User-file checks inspect metadata and ancestry without opening contents.
+* Include regressions for numeric root UID variants, normalized bind paths,
+  explicit-path baseline preservation, and strict projected JSON validation.
+
 ## 1.6
 
 * Add display-only status/severity/category filtering, deterministic sorting,

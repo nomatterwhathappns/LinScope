@@ -14,7 +14,10 @@
     "filesystem",
     "mac",
     "acl",
-    "sudo"
+    "sudo",
+    "systemd",
+    "docker",
+    "userfiles"
   ],
   "exceptions": {}
 }

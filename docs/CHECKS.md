@@ -1,6 +1,6 @@
 # Check catalog
 
-Fourteen categories, with stable IDs for both checks and inventory findings. Some
+Seventeen categories, with stable IDs for both checks and inventory findings. Some
 IDs are conditional: SSH-000 replaces unavailable/default-path SSH evaluation.
 A numeric ID count is not a measure of coverage or host security. See the module
 docstrings and emitted evidence for each check's exact scope.
@@ -207,3 +207,47 @@ connection context; `-000` records a collection failure for that context. The
 hash derives from canonical sorted JSON. Default SSH IDs remain unchanged.
 Supported baseline options are documented in the README and custom policy
 example. Their effective values are included in evidence and report scope.
+
+## systemd
+
+[Implementation](../linscope/checks/systemd.py)
+
+`SYSTEMD-000` records discovery scope. Per-unit `SYSTEMD-<12HEX>-001..007`
+review identity, NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp,
+CapabilityBoundingSet, and RestrictSUIDSGID. Hash input is the selected unit
+name. Automatic discovery inspects at most 30 running system services; explicit
+selections can inspect inactive loaded services. These are configuration
+properties, not proof of runtime isolation, command-prefix behavior, or user
+manager policy. Root identity alone is informational.
+
+## docker
+
+[Implementation](../linscope/checks/docker.py)
+
+`DOCKER-001` checks conventional socket metadata and `DOCKER-002` describes
+running-container discovery. Per-container `DOCKER-<12HEX>-001..006` review
+privileged mode, host networking, rootfs mutability, added capabilities, selected
+sensitive host binds, and configured user. `-000` is failed projected collection.
+Hash input is the full container ID.
+
+Only `unix:///var/run/docker.sock` is queried, with at most 25 running containers.
+Rootless/custom sockets, remote daemons, stopped containers, image CVEs,
+orchestration policy, mount aliases in the daemon namespace, and effective
+process capabilities are outside scope. Full inspect and environment data are
+never collected. Default Docker capabilities are not enumerated by CapAdd.
+
+## userfiles
+
+[Implementation](../linscope/checks/userfiles.py)
+
+`USERFILE-000` records an identity-scope failure and `USERFILE-001` a conventional
+private-key discovery failure. `USERFILE-<12HEX>-001` checks one path's metadata,
+resolved target, and lexical/resolved parent directories. Hash input is the
+absolute path. The real UID's account record selects the home directory;
+HOME/USER environment variables do not select another user's credential scope.
+
+Conventional paths include `.ssh`, `authorized_keys`, `id_*` private-key
+candidates excluding public files, AWS credentials, kubeconfig, Docker config,
+and Google ADC. No contents are opened. Explicit selections retain known-path
+baselines; extra files use a private baseline and extra directories require
+owner-only access. ACLs and actual credential validity are outside this category.

@@ -6,13 +6,14 @@ from datetime import date
 import json
 import os
 from pathlib import Path
+from pathlib import PurePosixPath
 import re
 import stat
 
 PROFILES = ("server", "desktop", "router", "container")
 CATEGORIES = ("ssh", "accounts", "permissions", "authentication", "network",
               "services", "kernel", "packages", "logging", "scheduled",
-              "filesystem", "mac", "acl", "sudo")
+              "filesystem", "mac", "acl", "sudo", "systemd", "docker", "userfiles")
 _CHECK_ID = re.compile(r"^[A-Z][A-Z0-9_]*(?:-[A-F0-9]{12})?-[0-9]{3,}$")
 _USER = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}\$?")
 
@@ -23,6 +24,31 @@ def validate_users(users):
     if len(users) != len(set(users)):
         raise ValueError("sudo_users must not contain duplicates")
     return sorted(users)
+
+
+def validate_paths(paths):
+    if not isinstance(paths, list) or len(paths) > 50:
+        raise ValueError("user_paths must be a list of at most 50 absolute metadata paths")
+    result = []
+    for path in paths:
+        if (not isinstance(path, str) or not path.startswith("/") or len(path) > 4096
+                or ".." in PurePosixPath(path).parts or any(ord(c) < 32 or 127 <= ord(c) < 160 for c in path)):
+            raise ValueError("user_paths require bounded absolute paths without traversal or control characters")
+        result.append(str(PurePosixPath(path)))
+    if len(result) != len(set(result)):
+        raise ValueError("user_paths must not contain duplicate normalized paths")
+    return sorted(result)
+
+
+def validate_service_units(units):
+    pattern = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.@:\\-]*\.service", re.ASCII)
+    if not isinstance(units, list) or len(units) > 30:
+        raise ValueError("service_units must be a list of at most 30 system service names")
+    if any(not isinstance(unit, str) or len(unit) > 255 or not pattern.fullmatch(unit) for unit in units):
+        raise ValueError("service_units must contain valid .service unit names without paths/options")
+    if len(units) != len(set(units)):
+        raise ValueError("service_units must not contain duplicates")
+    return sorted(units)
 
 
 def validate_baseline(baseline):
@@ -88,7 +114,7 @@ def validate_policy(policy: dict) -> dict:
     """Validate a policy and return a detached copy, without changing its meaning."""
     if not isinstance(policy, dict):
         raise ValueError("Policy must be a JSON object")
-    unknown = set(policy) - {"profile", "checks", "exceptions", "baseline", "ssh_contexts", "sudo_users"}
+    unknown = set(policy) - {"profile", "checks", "exceptions", "baseline", "ssh_contexts", "sudo_users", "user_paths", "service_units"}
     if unknown:
         raise ValueError("Unknown policy keys: " + ", ".join(sorted(unknown)))
     if "profile" in policy and policy["profile"] not in PROFILES:
@@ -126,6 +152,10 @@ def validate_policy(policy: dict) -> dict:
         result["ssh_contexts"] = validate_ssh_contexts(policy["ssh_contexts"])
     if "sudo_users" in policy:
         result["sudo_users"] = validate_users(policy["sudo_users"])
+    if "user_paths" in policy:
+        result["user_paths"] = validate_paths(policy["user_paths"])
+    if "service_units" in policy:
+        result["service_units"] = validate_service_units(policy["service_units"])
     return result
 
 

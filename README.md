@@ -13,7 +13,7 @@ a guarantee that a host is secure.
 
 ## Quick start
 
-Requires **Linux and Python 3.10+**. No third-party runtime dependencies.
+Requires **Linux and Python 3.10+**. No third-party Python runtime dependencies.
 Install once with `pipx` (which creates an isolated environment), then run
 `linscope` directly. If pipx reports that its command directory is absent from
 PATH, run `pipx ensurepath` and open a new terminal.
@@ -31,7 +31,9 @@ linscope --format html --output reports/review.html
 ```
 
 Run without elevation first. Unavailable evidence is reported as `UNKNOWN`;
-LinScope never invokes sudo. Additional read permissions can improve coverage,
+LinScope never runs granted commands under sudo or requests interactive
+elevation. Its sudo category only lists policy noninteractively. Additional
+read permissions can improve coverage,
 but are not needed to inspect the source or use the CLI. Shadow contents,
 password hashes, and private-key contents are never collected.
 
@@ -44,7 +46,7 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage through v1.6
+## Coverage through v1.7
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
@@ -76,15 +78,27 @@ linscope --version
 * **Mandatory access control:** available LSMs, AppArmor profile modes, SELinux
   enforcement, and persistent SELinux configuration. Both are not required.
 
-The primary target is Ubuntu/Debian. Other distributions and containers may
-produce `UNKNOWN` or `SKIP`; support must be verified before relying on results.
-Use `--profile server|desktop|router|container` to state the intended host role.
-
 * **POSIX ACLs:** effective named/group access under the ACL mask on protected
   targets, plus directory default-inheritance review.
 * **Effective sudo:** noninteractive evaluated policy listings for selected
   users; passwordless and broad-command review without running any grant or
   collecting raw permitted command arguments.
+* **Systemd hardening:** per-service identity review, NoNewPrivileges,
+  ProtectSystem/ProtectHome, PrivateTmp, capability bounding, and RestrictSUIDSGID.
+* **Docker:** conventional local socket access and running-container privileged
+  mode, host networking, rootfs mutability, added capabilities, sensitive binds,
+  and configured user, using only whitelisted fields.
+* **User files:** metadata for the invoking user's SSH/credential configuration
+  and optional explicit paths, including lexical/resolved ancestor permissions.
+
+The primary target is Ubuntu/Debian. Other distributions and containers may
+produce `UNKNOWN` or `SKIP`; support must be verified before relying on results.
+Use `--profile server|desktop|router|container` to state the intended host role.
+
+Optional system helpers such as `getfacl`, `sudo`, Docker, and systemd tooling
+are needed only for the relevant checks. Missing helpers produce visible
+UNKNOWN/SKIP results according to the available evidence; preflight shows
+which selected tools are available.
 
 ## Reading results
 
@@ -226,7 +240,7 @@ release; validate on your target VM before operational use.
 
 ## Checkpoint workflow
 
-All checkpoints are on `main`, tagged sequentially from `v1.0` through `v1.6`.
+All checkpoints are on `main`, tagged sequentially from `v1.0` through `v1.7`.
 To study a completed version without moving main:
 
 ```bash

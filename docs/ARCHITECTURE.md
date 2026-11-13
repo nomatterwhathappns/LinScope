@@ -20,9 +20,10 @@ flowchart LR
   and fixed-argument subprocess execution. Commands use a trusted system PATH,
   a controlled locale, timeouts, and bounded collected output. Fixture contexts
   cannot accidentally execute live commands.
-* `checks/`: fourteen independent modules; each `run(context)` returns findings.
-  Checks never run shell strings, invoke sudo, execute discovered tasks, download
-  package metadata, or change host settings.
+* `checks/`: seventeen independent modules; each `run(context)` returns findings.
+  Checks never run shell strings, execute discovered tasks or sudo grants,
+  download package metadata, or change host settings. The sudo category only
+  requests a noninteractive policy listing.
 * `registry.py`: explicit category registry; policy cannot inject Python modules
   or commands.
 * `cli.py`: scope/profile selection, collector isolation, report persistence,
@@ -66,3 +67,17 @@ The unit matrix checks Python 3.10/3.12/3.13. Live smoke checks have been run in
 restricted Linux cloud container, not an exhaustive distro/root-privilege matrix.
 Use a disposable target VM to validate production-specific behavior and
 configuration decisions.
+
+## Parameter and identity scope
+
+Custom baselines, explicit SSH connection contexts, selected sudo accounts,
+service units, and user metadata paths are recorded in `scope.parameters` when
+provided. Current-account categories also record the real UID. Different
+parameter sets are not equivalent for baseline comparison. Inventory changes
+within the same scope are shown as new/missing/changed findings, not presumed
+remediation.
+
+History uses Linux directory-level shared/exclusive locks to serialize writes
+and keep cooperating readers from seeing partial reports. It requires a
+LinScope tool identity and does not upload or delete snapshots. Hard interruption
+or external tampering can still leave corrupt files; these are reported visibly.

@@ -95,3 +95,25 @@ Source changes do not automatically update a normal non-editable pipx
 installation. Reinstall after switching checkpoints if you want to run that
 version. Development tests still use Python's unittest runner; that is separate
 from the installed command used to operate the tool.
+
+## Select service and user-file targets
+
+```bash
+linscope --category systemd --service-unit nginx.service --service-unit ssh.service
+linscope --category docker
+linscope --category userfiles
+linscope --category userfiles --user-path /home/alice/.ssh/id_ed25519
+```
+
+Choose a real path/account for your host; the absolute path above is illustrative.
+The user-file owner baseline stays the invoking real UID/root, so selecting
+another user's paths does not silently change the trusted identity. `user_paths`
+and `service_units` are also accepted in policy, with CLI selections overriding
+the corresponding policy list. Up to 50 absolute paths and 30 units are allowed.
+No shell expansion or executable commands are accepted in policy.
+
+Docker checks are optional by category and require access to the conventional
+local rootful socket; rootless/custom/remote Docker contexts are not used.
+They do not start/build/modify containers. Missing tooling or daemon access stays
+visible. Systemd checks inspect configured hardening properties, not application
+compatibility or runtime enforcement. No GUI is needed for these categories.

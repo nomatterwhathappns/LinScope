@@ -58,6 +58,7 @@ Semua checkpoint tetap ada di branch `main`; tag menandai snapshot-nya.
 | `v1.4` | Policy, HTML, perbandingan laporan, penguatan validasi input |
 | `v1.5` | Konteks SSH Match, ACL, sudo efektif, baseline yang bisa diatur |
 | `v1.6` | Filter tampilan, preflight, riwayat, laporan HTML interaktif |
+| `v1.7` | Hardening service systemd, Docker, metadata credential milik user |
 
 Gunakan versi terbaru untuk pemakaian; versi lama adalah checkpoint belajar
 dan belum memiliki seluruh perbaikan yang ada di versi terakhir.
