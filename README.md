@@ -7,6 +7,10 @@ stable ID, status, severity, collected evidence, and a recommendation. It is a
 learning and infrastructure-security project, not a compliance certification or
 a guarantee that a host is secure.
 
+[Learning guide (Bahasa Indonesia)](docs/BELAJAR.md) ·
+[Check catalog](docs/CHECKS.md) · [Architecture](docs/ARCHITECTURE.md) ·
+[Synthetic example](examples/report.json) · [Changelog](CHANGELOG.md)
+
 ## Quick start
 
 Requires **Linux and Python 3.10+**. No third-party runtime dependencies.
@@ -19,6 +23,7 @@ python3 -m linscope
 python3 -m linscope --category ssh --category permissions
 mkdir -p reports
 python3 -m linscope --format json --output reports/baseline.json
+python3 -m linscope --format html --output reports/review.html
 ```
 
 Run without elevation first. Unavailable evidence is reported as `UNKNOWN`;
@@ -35,7 +40,7 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage through v1.3
+## Coverage through v1.4
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
@@ -102,6 +107,58 @@ They may include hostnames, usernames, paths, and listening addresses. The
 Without `--fail-on-unknown`, UNKNOWN findings remain visible but do not fail the
 process. This is useful in restricted environments but should be intentional in CI.
 
+## Policy and accepted-risk exceptions
+
+Start with [examples/policy.json](examples/policy.json). `profile` and `checks`
+select a host role and category scope; command-line selections override them.
+Unknown keys, duplicate keys, invalid dates, and empty scopes are rejected.
+
+```bash
+python3 -m linscope --policy examples/policy.json
+python3 -m linscope --profile router --category kernel
+```
+
+An exception documents a specific accepted risk and must have a reason and an
+expiry date. It never removes a finding or changes its original status/severity:
+
+```json
+{
+  "exceptions": {
+    "SSH-002": {
+      "reason": "Temporary password access during a controlled migration",
+      "expires": "2030-01-01"
+    }
+  }
+}
+```
+
+Choose the real review deadline; the date above is illustrative. Expiry is
+inclusive through that UTC date. Expired exceptions stay visible as inactive.
+Exception IDs absent from a report produce visible policy warnings, including
+when a category is excluded or its evidence cannot be collected.
+
+By default `--fail-on` still counts findings with active exceptions. To explicitly
+honor accepted risks for that threshold, use both `--policy` and
+`--honor-exceptions`. UNKNOWN coverage is never excused by this option.
+
+```bash
+python3 -m linscope --policy examples/policy.json --fail-on high --fail-on-unknown
+```
+
+## Compare reports
+
+```bash
+python3 -m linscope --compare examples/report.json examples/report-after.json
+python3 -m linscope --compare reports/baseline.json reports/after.json --format json
+```
+
+Comparison is offline and supports text/JSON output. Host name, OS, profile,
+selected categories, and deep-search scope must match. A kernel/version update
+is allowed. Only WARN/FAIL changing to PASS is counted as resolved. Missing checks
+or a transition to UNKNOWN/SKIP never counts as a fix. Changes in evidence,
+severity, or exception metadata remain visible. It is a snapshot comparison,
+not a continuously running monitor.
+
 ## Development
 
 ```bash
@@ -110,6 +167,10 @@ python3 -m unittest discover -v
 
 Tests use synthetic configuration and command results. They do not change host
 security settings or require root. See [CHANGELOG.md](CHANGELOG.md) for checkpoints.
+GitHub Actions runs unit tests on Python 3.10, 3.12, and 3.13, validates a package
+installation, and checks offline report comparison. Live smoke checks in this
+project's cloud container do not establish full behavior on every Ubuntu/Debian
+release; validate on your target VM before operational use.
 
 ## Checkpoint workflow
 

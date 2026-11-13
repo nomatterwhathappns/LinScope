@@ -1,5 +1,6 @@
 """Metadata-only checks; shadow and private-key contents are never read."""
 import stat
+import re
 from linscope.core import Finding, unavailable
 
 
@@ -19,13 +20,21 @@ def run(ctx):
             mode = stat.S_IMODE(metadata.st_mode)
             issue = metadata.st_uid != 0 or bool(mode & ~allowed) or not stat.S_ISREG(metadata.st_mode)
             group_unknown = False
-            if path in ("/etc/shadow", "/etc/gshadow") and mode & 0o040:
+            if path in ("/etc/shadow", "/etc/gshadow") and mode & 0o040 and metadata.st_gid != 0:
                 try:
                     allowed_groups = {0}
+                    shadow_entries = []
                     for line in ctx.read("/etc/group").splitlines():
                         fields = line.split(":")
-                        if len(fields) == 4 and fields[0] == "shadow":
-                            allowed_groups.add(int(fields[2]))
+                        if fields[0] == "shadow":
+                            shadow_entries.append(fields)
+                    if len(shadow_entries) > 1:
+                        raise ValueError("Ambiguous duplicate shadow group")
+                    if shadow_entries:
+                        fields = shadow_entries[0]
+                        if len(fields) != 4 or not re.fullmatch(r"[0-9]+", fields[2]) or not 0 <= int(fields[2]) < 2**32 - 1:
+                            raise ValueError("Invalid shadow group GID")
+                        allowed_groups.add(int(fields[2]))
                     issue = issue or metadata.st_gid not in allowed_groups
                 except (OSError, ValueError):
                     group_unknown = True

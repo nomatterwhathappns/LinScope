@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from linscope.core import Context, Finding, unavailable
+from linscope.checks.accounts import parse_passwd
 
 CATEGORY = "authentication"
 
@@ -102,6 +103,7 @@ def _account_metadata(ctx):
     titles = [(5, "Interactive local accounts without a password"), (6, "Existing-account password aging inventory")]
     try:
         passwd = ctx.read("/etc/passwd")
+        parse_passwd(passwd)  # Reuse strict local identity validation.
         interactive = set()
         for line in passwd.splitlines():
             if not line.strip() or line.startswith("#"):

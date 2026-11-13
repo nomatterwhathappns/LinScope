@@ -5,13 +5,22 @@ from linscope.core import Finding, unavailable
 
 def parse_passwd(text):
     rows = []
+    names = set()
     for line in text.splitlines():
         if not line or line.startswith("#"):
             continue
         fields = line.split(":")
         if len(fields) != 7:
             raise ValueError("Malformed local passwd record; account assessment is incomplete")
-        rows.append((fields[0], int(fields[2]), int(fields[3]), fields[6]))
+        if not fields[0] or fields[0] in names or any(c.isspace() for c in fields[0]):
+            raise ValueError("Invalid or duplicate local account name")
+        if not all(re.fullmatch(r"[0-9]+", fields[index]) for index in (2, 3)):
+            raise ValueError("Local account UID/GID must be unsigned decimal integers")
+        uid, gid = int(fields[2]), int(fields[3])
+        if not (0 <= uid < 2**32 - 1 and 0 <= gid < 2**32 - 1):
+            raise ValueError("Local account UID/GID outside usable Linux range")
+        names.add(fields[0])
+        rows.append((fields[0], uid, gid, fields[6]))
     if not rows:
         raise ValueError("No local passwd records")
     return rows
@@ -36,8 +45,12 @@ def run(ctx):
                                 "Review shared UIDs, which share file ownership and permissions; document intentional cases."))
         try:
             defs = ctx.read("/etc/login.defs")
-            matches = re.findall(r"^\s*UID_MIN\s+(\d+)\s*(?:#.*)?$", defs, re.M)
-            uid_min = int(matches[-1]) if matches else None
+            entries = [line.split("#", 1)[0].split() for line in defs.splitlines()]
+            entries = [entry for entry in entries if entry and entry[0] == "UID_MIN"]
+            valid = len(entries) == 1 and len(entries[0]) == 2 and re.fullmatch(r"[0-9]+", entries[0][1])
+            uid_min = int(entries[0][1]) if valid else None
+            if uid_min is not None and not 1 <= uid_min < 2**32 - 1:
+                uid_min = None
         except OSError:
             uid_min = None
         if uid_min is None:

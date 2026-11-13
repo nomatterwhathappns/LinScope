@@ -1,0 +1,18 @@
+{
+  "profile": "server",
+  "checks": [
+    "ssh",
+    "accounts",
+    "permissions",
+    "authentication",
+    "network",
+    "services",
+    "kernel",
+    "packages",
+    "logging",
+    "scheduled",
+    "filesystem",
+    "mac"
+  ],
+  "exceptions": {}
+}

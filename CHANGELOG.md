@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4
+
+* Add standalone HTML reports, declarative profile/category policy, expiring
+  visible exceptions, and conservative offline JSON report comparison.
+* Preserve original finding status; active exceptions affect exit thresholds
+  only with an explicit --honor-exceptions flag. Warn about unmatched IDs.
+* Validate malformed identity records and UID_MIN rather than producing clean
+  account findings from incomplete evidence.
+* Reject FIFOs/special files and invalid UTF-8 during bounded file collection;
+  preserve JSON evidence exactly even when redirected through stdout.
+* Add integration/regression tests, package-install CI, synthetic reports, a
+  check catalog, architecture notes, and an Indonesian learning guide.
+
 ## 1.3
 
 * Complete 12-category scope with scheduled tasks, filesystem and MAC modules.

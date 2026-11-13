@@ -75,7 +75,10 @@ class Context:
             raw = stream.read(limit + 1)
         if len(raw) > limit:
             raise OSError(f"{path}: exceeds collection size limit")
-        return raw.decode("utf-8", errors="replace")
+        try:
+            return raw.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as exc:
+            raise OSError(f"{path}: not valid UTF-8; evidence was not evaluated") from exc
 
     def stat(self, path: str):
         return self.path(path).stat()

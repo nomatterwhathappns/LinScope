@@ -36,6 +36,16 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(self.finding(PermissionContext({"/etc/shadow": metadata(0o640, gid=42)}), "PERM-003").status, "PASS")
         self.assertEqual(self.finding(PermissionContext({"/etc/shadow": metadata(0o640, gid=1000)}), "PERM-003").status, "WARN")
 
+    def test_ambiguous_shadow_group_does_not_expand_trust(self):
+        ctx = PermissionContext({"/etc/shadow": metadata(0o640, gid=1000)}, group="shadow:x:42:\nshadow:x:1000:someone\n")
+        self.assertEqual(self.finding(ctx, "PERM-003").status, "UNKNOWN")
+
+    def test_malformed_shadow_gid_is_unknown(self):
+        for group in ("shadow:x:-1:\n", "shadow:x:4294967295:\n", "shadow:invalid\n"):
+            with self.subTest(group=group):
+                ctx = PermissionContext({"/etc/shadow": metadata(0o640, gid=42)}, group=group)
+                self.assertEqual(self.finding(ctx, "PERM-003").status, "UNKNOWN")
+
     def test_world_readable_shadow_warns(self):
         self.assertEqual(self.finding(PermissionContext({"/etc/shadow": metadata(0o644)}), "PERM-003").status, "WARN")
 

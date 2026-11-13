@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "tool": {
+    "name": "LinScope",
+    "version": "1.4"
+  },
+  "generated_at": "2026-11-14T01:00:00+00:00",
+  "host": {
+    "name": "synthetic-demo-host",
+    "system": "Linux",
+    "release": "example-kernel",
+    "profile": "server"
+  },
+  "scope": {
+    "checks": [
+      "accounts",
+      "authentication",
+      "filesystem",
+      "kernel",
+      "logging",
+      "mac",
+      "network",
+      "packages",
+      "permissions",
+      "scheduled",
+      "services",
+      "ssh"
+    ],
+    "deep": false
+  },
+  "findings": [
+    {
+      "id": "SSH-001",
+      "category": "ssh",
+      "title": "Root SSH login",
+      "status": "PASS",
+      "severity": "high",
+      "evidence": "SYNTHETIC: sshd -T default context: permitrootlogin no.",
+      "recommendation": "Prefer named accounts and verify recovery access before restricting root login."
+    },
+    {
+      "id": "ACCT-001",
+      "category": "accounts",
+      "title": "UID zero accounts",
+      "status": "PASS",
+      "severity": "critical",
+      "evidence": "SYNTHETIC: UID 0 accounts: root.",
+      "recommendation": "Review any additional UID zero accounts."
+    },
+    {
+      "id": "PERM-003",
+      "category": "permissions",
+      "title": "Protected file: /etc/shadow",
+      "status": "PASS",
+      "severity": "high",
+      "evidence": "SYNTHETIC: uid=0, gid=42 (shadow), mode=0640.",
+      "recommendation": "Keep credential-file access restricted; no hashes were collected."
+    },
+    {
+      "id": "AUTHENTICATION-004",
+      "category": "authentication",
+      "title": "PAM failed-login controls review",
+      "status": "INFO",
+      "severity": "info",
+      "evidence": "SYNTHETIC: A faillock module reference exists; enforcement was not established.",
+      "recommendation": "Review the complete PAM sequence and lockout options."
+    },
+    {
+      "id": "NETWORK-002",
+      "category": "network",
+      "title": "Non-loopback bindings review",
+      "status": "INFO",
+      "severity": "info",
+      "evidence": "SYNTHETIC: One TCP listener binds a wildcard address. This is not proof of Internet reachability.",
+      "recommendation": "Check intended interfaces and effective access controls."
+    },
+    {
+      "id": "SERVICES-003",
+      "category": "services",
+      "title": "Legacy remote-service review",
+      "status": "PASS",
+      "severity": "medium",
+      "evidence": "SYNTHETIC: No match in the selected legacy-unit name list.",
+      "recommendation": "Review custom services and other activation mechanisms separately."
+    },
+    {
+      "id": "KERNEL-001",
+      "category": "kernel",
+      "title": "IPv4 packet forwarding",
+      "status": "PASS",
+      "severity": "medium",
+      "evidence": "SYNTHETIC: net.ipv4.ip_forward=0; expected 0 for server profile.",
+      "recommendation": "Use a router profile only when routing is intended."
+    },
+    {
+      "id": "PACKAGES-003",
+      "category": "packages",
+      "title": "Pending package upgrades",
+      "status": "UNKNOWN",
+      "severity": "medium",
+      "evidence": "SYNTHETIC: Cache freshness could not be established.",
+      "recommendation": "Review package metadata through the normal maintenance process."
+    },
+    {
+      "id": "LOGGING-002",
+      "category": "logging",
+      "title": "Journald persistent-storage configuration",
+      "status": "WARN",
+      "severity": "medium",
+      "evidence": "SYNTHETIC: Storage=volatile.",
+      "recommendation": "Choose retention appropriate for investigation needs."
+    },
+    {
+      "id": "SCHEDULED-005",
+      "category": "scheduled",
+      "title": "System timer unit permissions",
+      "status": "UNKNOWN",
+      "severity": "info",
+      "evidence": "SYNTHETIC: Insufficient permission to inspect unit metadata.",
+      "recommendation": "Rerun with appropriate read permissions; do not treat missing evidence as safe."
+    },
+    {
+      "id": "FILESYSTEM-003",
+      "category": "filesystem",
+      "title": "Mount restrictions for /dev/shm",
+      "status": "PASS",
+      "severity": "info",
+      "evidence": "SYNTHETIC: nodev,nosuid,noexec observed on the resolved mount.",
+      "recommendation": "Verify application compatibility and intended mount configuration."
+    },
+    {
+      "id": "MAC-003",
+      "category": "mac",
+      "title": "SELinux runtime enforcement",
+      "status": "SKIP",
+      "severity": "info",
+      "evidence": "SYNTHETIC: SELinux is not active; this example host uses AppArmor.",
+      "recommendation": "Review AppArmor confinement and workload coverage separately."
+    }
+  ],
+  "policy_warnings": []
+}

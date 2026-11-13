@@ -33,6 +33,12 @@ class CoreTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 Context(root=Path(tmp)).read("/fifo")
 
+    def test_invalid_utf8_is_not_silently_modified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "invalid").write_bytes(b"value=\xff")
+            with self.assertRaises(OSError):
+                Context(root=Path(tmp)).read("/invalid")
+
     def test_path_traversal_rejected(self):
         with self.assertRaises(ValueError):
             Context().path("/etc/../shadow")
