@@ -52,10 +52,17 @@ class Context:
     root exists for fixture testing only; the CLI always audits the live host.
     Commands are fixed argument lists supplied by built-in checks, never policy.
     """
-    def __init__(self, profile="server", deep=False, root=Path("/")):
+    def __init__(self, profile="server", deep=False, root=Path("/"), *,
+                 baseline=None, ssh_contexts=None, sudo_users=None,
+                 user_paths=None, service_units=None):
         self.profile = profile
         self.deep = deep
         self.root = Path(root)
+        self.baseline = baseline or {}
+        self.ssh_contexts = ssh_contexts or []
+        self.sudo_users = sudo_users or []
+        self.user_paths = user_paths or []
+        self.service_units = service_units or []
         self._commands: dict[tuple[str, ...], CommandResult] = {}
 
     def path(self, path: str):

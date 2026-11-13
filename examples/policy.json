@@ -12,7 +12,9 @@
     "logging",
     "scheduled",
     "filesystem",
-    "mac"
+    "mac",
+    "acl",
+    "sudo"
   ],
   "exceptions": {}
 }

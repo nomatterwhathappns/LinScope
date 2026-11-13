@@ -12,8 +12,67 @@ import stat
 PROFILES = ("server", "desktop", "router", "container")
 CATEGORIES = ("ssh", "accounts", "permissions", "authentication", "network",
               "services", "kernel", "packages", "logging", "scheduled",
-              "filesystem", "mac")
-_CHECK_ID = re.compile(r"^[A-Z][A-Z0-9_]*-[0-9]{3,}$")
+              "filesystem", "mac", "acl", "sudo")
+_CHECK_ID = re.compile(r"^[A-Z][A-Z0-9_]*(?:-[A-F0-9]{12})?-[0-9]{3,}$")
+_USER = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}\$?")
+
+
+def validate_users(users):
+    if not isinstance(users, list) or len(users) > 20 or any(not isinstance(user, str) or not _USER.fullmatch(user) for user in users):
+        raise ValueError("sudo_users must contain at most 20 simple local usernames")
+    if len(users) != len(set(users)):
+        raise ValueError("sudo_users must not contain duplicates")
+    return sorted(users)
+
+
+def validate_baseline(baseline):
+    if not isinstance(baseline, dict):
+        raise ValueError("baseline must be an object keyed by supported check IDs")
+    result = deepcopy(baseline)
+    for check_id, value in result.items():
+        if not isinstance(value, dict):
+            raise ValueError(f"{check_id}: baseline must be an object")
+        if check_id == "SSH-001":
+            allowed = value.get("allowed")
+            choices = {"no", "yes", "prohibit-password", "without-password", "forced-commands-only"}
+            if set(value) != {"allowed"} or not isinstance(allowed, list) or not allowed or any(not isinstance(v, str) or v not in choices for v in allowed):
+                raise ValueError("SSH-001 baseline requires a nonempty allowed list of PermitRootLogin values")
+            normalized = ["prohibit-password" if v == "without-password" else v for v in allowed]
+            if len(normalized) != len(set(normalized)):
+                raise ValueError("SSH-001 allowed values must be unique (including aliases)")
+            value["allowed"] = sorted(normalized)
+        elif check_id in ("SSH-005", "PACKAGES-002"):
+            key, upper = ("max_attempts", 100) if check_id == "SSH-005" else ("max_age_days", 365)
+            if set(value) != {key} or type(value.get(key)) is not int or not 1 <= value[key] <= upper:
+                raise ValueError(f"{check_id} baseline requires integer {key} in 1..{upper}")
+        else:
+            raise ValueError(f"Unsupported baseline check ID: {check_id}")
+    return result
+
+
+def validate_ssh_contexts(contexts):
+    from linscope.checks.ssh import normalize_connection_context
+    if not isinstance(contexts, list) or len(contexts) > 20:
+        raise ValueError("ssh_contexts must be a list of at most 20 connection contexts")
+    normalized = [normalize_connection_context(item) for item in contexts]
+    keys = [json.dumps(item, sort_keys=True) for item in normalized]
+    if len(keys) != len(set(keys)):
+        raise ValueError("ssh_contexts must not contain duplicate contexts")
+    return [item for _, item in sorted(zip(keys, normalized), key=lambda pair: pair[0])]
+
+
+def parse_ssh_context(value):
+    context = {}
+    for part in value.split(","):
+        key, sep, item = part.partition("=")
+        if not sep or not key or key in context:
+            raise ValueError("SSH context requires unique comma-separated key=value fields")
+        context[key] = item
+    if "lport" in context:
+        if not re.fullmatch(r"[0-9]+", context["lport"]):
+            raise ValueError("SSH lport must be an integer")
+        context["lport"] = int(context["lport"])
+    return validate_ssh_contexts([context])[0]
 
 
 def _unique_object(pairs):
@@ -29,7 +88,7 @@ def validate_policy(policy: dict) -> dict:
     """Validate a policy and return a detached copy, without changing its meaning."""
     if not isinstance(policy, dict):
         raise ValueError("Policy must be a JSON object")
-    unknown = set(policy) - {"profile", "checks", "exceptions"}
+    unknown = set(policy) - {"profile", "checks", "exceptions", "baseline", "ssh_contexts", "sudo_users"}
     if unknown:
         raise ValueError("Unknown policy keys: " + ", ".join(sorted(unknown)))
     if "profile" in policy and policy["profile"] not in PROFILES:
@@ -60,7 +119,14 @@ def validate_policy(policy: dict) -> dict:
             date.fromisoformat(expires)
         except ValueError as exc:
             raise ValueError(f"{check_id}: invalid expiry date") from exc
-    return deepcopy(policy)
+    result = deepcopy(policy)
+    if "baseline" in policy:
+        result["baseline"] = validate_baseline(policy["baseline"])
+    if "ssh_contexts" in policy:
+        result["ssh_contexts"] = validate_ssh_contexts(policy["ssh_contexts"])
+    if "sudo_users" in policy:
+        result["sudo_users"] = validate_users(policy["sudo_users"])
+    return result
 
 
 def load_policy(path: str | Path) -> dict:

@@ -103,6 +103,36 @@ class PackageTests(unittest.TestCase):
         ctx.os_release = PermissionError("denied")
         self.assertTrue(all(f.status == "UNKNOWN" for f in self.findings(ctx).values()))
 
+    def test_custom_cache_age_affects_freshness_and_zero_upgrade_verdict(self):
+        ctx = FakeContext()
+        ctx.mtime = NOW - 8 * 86400
+        ctx.baseline = {"PACKAGES-002": {"max_age_days": 10}}
+        results = self.findings(ctx)
+        self.assertEqual(results["PACKAGES-002"].status, "PASS")
+        self.assertEqual(results["PACKAGES-003"].status, "PASS")
+        self.assertIn("threshold is 10 days", results["PACKAGES-002"].evidence)
+        ctx.baseline = {"PACKAGES-002": {"max_age_days": 3}}
+        results = self.findings(ctx)
+        self.assertEqual(results["PACKAGES-002"].status, "WARN")
+        self.assertEqual(results["PACKAGES-003"].status, "UNKNOWN")
+
+    def test_invalid_cache_age_never_establishes_currency(self):
+        for value in (True, 0, -1, 366, "7", None):
+            with self.subTest(value=value):
+                ctx = FakeContext()
+                ctx.baseline = {"PACKAGES-002": {"max_age_days": value}}
+                results = self.findings(ctx)
+                self.assertEqual(results["PACKAGES-002"].status, "UNKNOWN")
+                self.assertEqual(results["PACKAGES-003"].status, "UNKNOWN")
+
+    def test_cache_age_threshold_is_inclusive(self):
+        ctx = FakeContext()
+        ctx.baseline = {"PACKAGES-002": {"max_age_days": 1}}
+        ctx.mtime = NOW - 86400
+        self.assertEqual(self.findings(ctx)["PACKAGES-002"].status, "PASS")
+        ctx.mtime -= 1
+        self.assertEqual(self.findings(ctx)["PACKAGES-002"].status, "WARN")
+
     def test_reboot_marker_honest_about_absence(self):
         ctx = FakeContext()
         absent = self.findings(ctx)["PACKAGES-004"]

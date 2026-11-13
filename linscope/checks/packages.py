@@ -31,6 +31,14 @@ def _supported(ctx):
 
 
 def _cache(ctx):
+    baseline = getattr(ctx, "baseline", {})
+    if not isinstance(baseline, dict):
+        return None, "Package baseline must be an object"
+    config = baseline.get("PACKAGES-002", {"max_age_days": 7})
+    if (not isinstance(config, dict) or set(config) != {"max_age_days"}
+            or type(config["max_age_days"]) is not int or not 1 <= config["max_age_days"] <= 365):
+        return None, "PACKAGES-002 max_age_days must be an integer in 1..365"
+    max_age_days = config["max_age_days"]
     try:
         paths = sorted(set(ctx.glob("/var/lib/apt/lists/*_InRelease") +
                            ctx.glob("/var/lib/apt/lists/*_Release")))
@@ -43,9 +51,9 @@ def _cache(ctx):
         return None, "APT metadata has a future timestamp; check system time"
     oldest = max(ages)
     evidence = (f"Inspected {len(paths)} Release/InRelease files; oldest local timestamp is "
-                f"{max(oldest, 0) / 86400:.1f} days old; threshold is 7 days. "
+                f"{max(oldest, 0) / 86400:.1f} days old; threshold is {max_age_days} days. "
                 "Filesystem timestamps do not verify repository authenticity or a successful refresh.")
-    return oldest <= CACHE_MAX_AGE, evidence
+    return oldest <= max_age_days * 86400, evidence
 
 
 def run(ctx):

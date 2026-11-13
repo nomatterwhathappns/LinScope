@@ -1,0 +1,30 @@
+{
+  "profile": "server",
+  "checks": [
+    "ssh",
+    "packages",
+    "acl",
+    "sudo"
+  ],
+  "baseline": {
+    "SSH-001": {
+      "allowed": [
+        "no"
+      ]
+    },
+    "SSH-005": {
+      "max_attempts": 3
+    },
+    "PACKAGES-002": {
+      "max_age_days": 3
+    }
+  },
+  "ssh_contexts": [
+    {
+      "user": "alice",
+      "addr": "192.0.2.10",
+      "host": "client.example"
+    }
+  ],
+  "exceptions": {}
+}

@@ -10,7 +10,7 @@ import sys
 
 from linscope import __version__
 from linscope.core import Context, SEVERITIES, unavailable
-from linscope.policy import apply_exceptions, load_policy
+from linscope.policy import apply_exceptions, load_policy, parse_ssh_context, validate_ssh_contexts, validate_users
 from linscope.registry import CHECKS
 from linscope.reporting import compare_reports, render_html, render_json, render_text
 
@@ -28,7 +28,7 @@ def collect(ctx, categories):
     ids = [finding.id for finding in findings]
     if len(ids) != len(set(ids)):
         raise ValueError("Duplicate check IDs detected")
-    return {
+    report = {
         "schema_version": 1,
         "tool": {"name": "LinScope", "version": __version__},
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -37,6 +37,10 @@ def collect(ctx, categories):
         "scope": {"checks": sorted(categories), "deep": ctx.deep},
         "findings": [finding.to_dict() for finding in findings],
     }
+    parameters = {key: getattr(ctx, key) for key in ("baseline", "ssh_contexts", "sudo_users", "user_paths", "service_units") if getattr(ctx, key, None)}
+    if parameters:
+        report["scope"]["parameters"] = parameters
+    return report
 
 
 def load_report(path):
@@ -96,11 +100,13 @@ def main(argv=None):
     parser.add_argument("--fail-on", choices=SEVERITIES[1:], help="Exit 1 for WARN/FAIL at this severity or higher.")
     parser.add_argument("--fail-on-unknown", action="store_true", help="Exit 2 when any check has UNKNOWN coverage.")
     parser.add_argument("--policy", metavar="JSON", help="Load declarative profile/categories and expiring exceptions.")
+    parser.add_argument("--ssh-context", action="append", metavar="USER_ADDR_HOST", help="Evaluate SSH Match context: user=alice,addr=192.0.2.1,host=client.example (repeatable).")
+    parser.add_argument("--sudo-user", action="append", metavar="USER", help="List effective sudo policy for a selected user without executing grants (repeatable).")
     parser.add_argument("--honor-exceptions", action="store_true", help="Exclude active policy exceptions from --fail-on only; findings remain visible.")
     parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"), help="Compare compatible JSON reports offline (text/JSON output).")
     args = parser.parse_args(argv)
     if args.compare:
-        if args.profile or args.category or args.deep or args.policy or args.fail_on or args.fail_on_unknown or args.honor_exceptions or args.list_categories:
+        if args.profile or args.category or args.deep or args.policy or args.fail_on or args.fail_on_unknown or args.honor_exceptions or args.list_categories or args.ssh_context or args.sudo_user:
             parser.error("--compare cannot be combined with live-check or policy options")
         if args.format == "html":
             parser.error("--compare supports --format text or json; HTML is available for scan reports")
@@ -122,7 +128,13 @@ def main(argv=None):
     try:
         policy = load_policy(args.policy) if args.policy else {}
         categories = list(dict.fromkeys(args.category or policy.get("checks") or CHECKS))
-        report = collect(Context(profile=args.profile or policy.get("profile", "server"), deep=args.deep), categories)
+        ssh_contexts = validate_ssh_contexts([parse_ssh_context(value) for value in args.ssh_context]) if args.ssh_context else policy.get("ssh_contexts", [])
+        sudo_users = validate_users(args.sudo_user) if args.sudo_user else policy.get("sudo_users", [])
+        context_options = {"profile": args.profile or policy.get("profile", "server"), "deep": args.deep}
+        for key, value in (("baseline", policy.get("baseline", {})), ("ssh_contexts", ssh_contexts), ("sudo_users", sudo_users)):
+            if value:
+                context_options[key] = value
+        report = collect(Context(**context_options), categories)
         if args.policy:
             report["findings"] = apply_exceptions(report["findings"], policy)
             emitted = {f["id"] for f in report["findings"]}

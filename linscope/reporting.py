@@ -21,11 +21,19 @@ def _findings(report: dict) -> list[dict]:
         raise ValueError("Report policy_warnings must be a list of strings")
     if "scope" in report:
         scope = report["scope"]
-        if (not isinstance(scope, dict) or set(scope) != {"checks", "deep"}
+        if (not isinstance(scope, dict) or not {"checks", "deep"} <= set(scope)
+                or set(scope) - {"checks", "deep", "parameters"}
                 or type(scope["deep"]) is not bool or not isinstance(scope["checks"], list)
                 or not all(isinstance(category, str) and category for category in scope["checks"])
                 or len(scope["checks"]) != len(set(scope["checks"]))):
             raise ValueError("Report scope requires unique checks and a boolean deep flag")
+        if "parameters" in scope:
+            if not isinstance(scope["parameters"], dict):
+                raise ValueError("Report scope parameters must be an object")
+            try:
+                json.dumps(scope["parameters"], allow_nan=False)
+            except (TypeError, ValueError, RecursionError) as exc:
+                raise ValueError("Report scope parameters must contain finite JSON data") from exc
     host = report.get("host")
     if not isinstance(host, dict) or not all(isinstance(host.get(k), str) and host[k]
                                               for k in ("name", "system", "profile")):

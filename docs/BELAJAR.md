@@ -10,7 +10,7 @@ Buka `examples/report.json` atau `examples/report.html`. Semuanya data sintetis,
 bukan hasil pemeriksaan sebuah server sungguhan. Bandingkan dua contoh:
 
 ```bash
-python3 -m linscope --compare examples/report.json examples/report-after.json
+linscope --compare examples/report.json examples/report-after.json
 ```
 
 Perhatikan perubahan `SSH-001`. Temuan selesai hanya jika berubah dari WARN/FAIL
@@ -21,7 +21,7 @@ menjadi PASS. Hilangnya bukti, misalnya berubah ke UNKNOWN, tidak dihitung seles
 Di Linux dengan Python 3.10 atau lebih baru:
 
 ```bash
-python3 -m linscope --category kernel
+linscope --category kernel
 ```
 
 Mulai tanpa sudo. Pilih profil yang menggambarkan mesinmu, misalnya
@@ -56,6 +56,7 @@ Semua checkpoint tetap ada di branch `main`; tag menandai snapshot-nya.
 | `v1.2` | Sysctl, cache paket, logging |
 | `v1.3` | Cron/timer, mount, AppArmor/SELinux, symlink |
 | `v1.4` | Policy, HTML, perbandingan laporan, penguatan validasi input |
+| `v1.5` | Konteks SSH Match, ACL, sudo efektif, baseline yang bisa diatur |
 
 Gunakan versi terbaru untuk pemakaian; versi lama adalah checkpoint belajar
 dan belum memiliki seluruh perbaikan yang ada di versi terakhir.
@@ -71,8 +72,10 @@ Kalau ingin menjalankan snapshot lama, pastikan pekerjaan lokal sudah tersimpan:
 
 ```bash
 git switch --detach v1.0
-python3 -m linscope --help
+pipx install --force .
+linscope --help
 git switch main
+pipx install --force .
 ```
 
 ## 5. Pakai tes buat mencoba perubahan

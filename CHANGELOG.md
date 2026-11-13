@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5
+
+* Evaluate explicit SSH user/address/host Match contexts with stable target IDs.
+* Add mask-aware POSIX ACL checks and noninteractive effective sudo listings.
+* Configure root-login acceptance, authentication attempt limits, and APT cache
+  age with strictly validated baseline settings; record parameters in report scope.
+* Keep different parameter/baseline scopes incomparable, retain collection
+  uncertainty, and avoid collecting raw sudo command arguments or credential contents.
+* Make the installed `linscope` command the primary documented entry point.
+
 ## 1.4
 
 * Add standalone HTML reports, declarative profile/category policy, expiring

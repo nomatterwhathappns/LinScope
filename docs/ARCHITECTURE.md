@@ -20,7 +20,7 @@ flowchart LR
   and fixed-argument subprocess execution. Commands use a trusted system PATH,
   a controlled locale, timeouts, and bounded collected output. Fixture contexts
   cannot accidentally execute live commands.
-* `checks/`: twelve independent modules; each `run(context)` returns findings.
+* `checks/`: fourteen independent modules; each `run(context)` returns findings.
   Checks never run shell strings, invoke sudo, execute discovered tasks, download
   package metadata, or change host settings.
 * `registry.py`: explicit category registry; policy cannot inject Python modules
@@ -46,7 +46,7 @@ an explicit category error finding records incomplete coverage.
 
 Current checks review default/conventional locations and the current namespaces.
 They do not cover all identity providers, effective ACLs, every privilege policy,
-all SSH Match contexts, every firewall rule path, all application dependencies,
+all unselected SSH Match contexts, every firewall rule path, all application dependencies,
 or cloud-provider IAM. A local snapshot cannot prove remote reachability,
 continuous protection, package vulnerability status, or freedom from compromise.
 

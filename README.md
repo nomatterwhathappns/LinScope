@@ -14,16 +14,20 @@ a guarantee that a host is secure.
 ## Quick start
 
 Requires **Linux and Python 3.10+**. No third-party runtime dependencies.
+Install once with `pipx` (which creates an isolated environment), then run
+`linscope` directly. If pipx reports that its command directory is absent from
+PATH, run `pipx ensurepath` and open a new terminal.
 
 ```bash
 git clone https://github.com/nomatterwhathappns/LinScope.git
 cd LinScope
-python3 -m linscope --help
-python3 -m linscope
-python3 -m linscope --category ssh --category permissions
+pipx install .
+linscope --help
+linscope
+linscope --category ssh --category permissions
 mkdir -p reports
-python3 -m linscope --format json --output reports/baseline.json
-python3 -m linscope --format html --output reports/review.html
+linscope --format json --output reports/baseline.json
+linscope --format html --output reports/review.html
 ```
 
 Run without elevation first. Unavailable evidence is reported as `UNKNOWN`;
@@ -40,12 +44,13 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage through v1.4
+## Coverage through v1.5
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
   attempt limit, X11 and forwarded-port scope. Connection-specific `Match`
-  contexts and live daemon flags require separate review.
+  contexts can be selected explicitly; live daemon flags and unselected contexts
+  require separate review.
 * **Accounts:** UID 0, duplicate UIDs, interactive system accounts, selected
   privileged groups, and sudo rule inventory. Local files do not cover remote
   identity providers; sudo text matches are not an effective-privilege engine.
@@ -74,6 +79,12 @@ linscope --version
 The primary target is Ubuntu/Debian. Other distributions and containers may
 produce `UNKNOWN` or `SKIP`; support must be verified before relying on results.
 Use `--profile server|desktop|router|container` to state the intended host role.
+
+* **POSIX ACLs:** effective named/group access under the ACL mask on protected
+  targets, plus directory default-inheritance review.
+* **Effective sudo:** noninteractive evaluated policy listings for selected
+  users; passwordless and broad-command review without running any grant or
+  collecting raw permitted command arguments.
 
 ## Reading results
 
@@ -114,8 +125,8 @@ select a host role and category scope; command-line selections override them.
 Unknown keys, duplicate keys, invalid dates, and empty scopes are rejected.
 
 ```bash
-python3 -m linscope --policy examples/policy.json
-python3 -m linscope --profile router --category kernel
+linscope --policy examples/policy.json
+linscope --profile router --category kernel
 ```
 
 An exception documents a specific accepted risk and must have a reason and an
@@ -142,14 +153,39 @@ honor accepted risks for that threshold, use both `--policy` and
 `--honor-exceptions`. UNKNOWN coverage is never excused by this option.
 
 ```bash
-python3 -m linscope --policy examples/policy.json --fail-on high --fail-on-unknown
+linscope --policy examples/policy.json --fail-on high --fail-on-unknown
 ```
+
+## Deeper checks and custom baselines
+
+```bash
+linscope --category ssh --ssh-context user=alice,addr=192.0.2.10,host=client.example
+linscope --category acl --category sudo --sudo-user alice
+linscope --policy examples/policy-custom.json
+```
+
+SSH context keys are `user`, `addr` (numeric IP), and `host`; optional `laddr`
+and `lport` allow local-address/port Match conditions. Contexts do not connect to
+those addresses. Each target has a stable hashed ID usable in exceptions.
+
+Custom `baseline` supports `SSH-001.allowed` (valid PermitRootLogin modes),
+`SSH-005.max_attempts` (integer 1..100), and `PACKAGES-002.max_age_days`
+(integer 1..365). The same SSH baseline applies to default and selected Match
+contexts; the package threshold also governs whether a zero-upgrade result can
+be trusted. `ssh_contexts` and `sudo_users` can be supplied in policy. CLI target
+selections override the respective policy selections. Different nondefault
+parameters are recorded in scope and cannot be compared as equivalent scans.
+
+Effective sudo listings use `sudo -n -ll -U USER`, never command execution or
+interactive elevation. Sudo may consult its configured policy backends; listing
+failure remains UNKNOWN. Without explicit selection only the real-UID account
+is queried. Listings describe sudo policy, not every possible escalation path.
 
 ## Compare reports
 
 ```bash
-python3 -m linscope --compare examples/report.json examples/report-after.json
-python3 -m linscope --compare reports/baseline.json reports/after.json --format json
+linscope --compare examples/report.json examples/report-after.json
+linscope --compare reports/baseline.json reports/after.json --format json
 ```
 
 Comparison is offline and supports text/JSON output. Host name, OS, profile,
