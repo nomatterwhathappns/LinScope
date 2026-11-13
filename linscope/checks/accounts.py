@@ -44,7 +44,7 @@ def run(ctx):
             findings.append(unavailable("ACCT-003", "accounts", "Interactive system accounts", "UID_MIN could not be established from /etc/login.defs"))
         else:
             interactive = [name for name, uid, _, shell in users if 0 < uid < uid_min and shell not in
-                           ("/usr/sbin/nologin", "/sbin/nologin", "/bin/false", "/usr/bin/false", "")]
+                           ("/usr/sbin/nologin", "/sbin/nologin", "/bin/false", "/usr/bin/false")]
             findings.append(Finding("ACCT-003", "accounts", "Interactive system accounts",
                                     "WARN" if interactive else "PASS", "medium",
                                     f"UID_MIN={uid_min}; system accounts with interactive shells: " + (", ".join(interactive) or "none"),
@@ -73,9 +73,12 @@ def run(ctx):
                     custom_include = True
                 if not clean or clean.startswith(("#", "@")):
                     continue
+                # Conventional inline comments are not policy tokens. This
+                # remains an inventory, not a complete sudoers grammar parser.
+                clean = re.split(r"\s+#(?!\d)", clean, maxsplit=1)[0]
                 if re.search(r"\bNOPASSWD\s*:", clean):
                     nopasswd.append(f"{path}:{number}")
-                if re.search(r"=\s*\([^)]*ALL[^)]*\).*\bALL\s*(?:#.*)?$", clean) and not clean.startswith("root"):
+                if re.search(r"=\s*\([^)]*ALL[^)]*\).*\bALL\s*(?:#.*)?$", clean) and clean.split()[0] != "root":
                     broad.append(f"{path}:{number}")
         findings.append(Finding("ACCT-005", "accounts", "Passwordless sudo rule review",
                                 "WARN" if nopasswd else "INFO", "medium",

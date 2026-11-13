@@ -35,7 +35,7 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage at v1.0
+## Coverage through v1.1
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
@@ -46,6 +46,13 @@ linscope --version
   identity providers; sudo text matches are not an effective-privilege engine.
 * **Permissions:** protected system files, SSH host-key metadata, temporary
   directory sticky bits, and optional scoped SUID/SGID/world-write searches.
+* **Authentication:** password-creation defaults, PAM quality/lockout module
+  references, and existing-account password status/aging metadata without hashes.
+* **Network:** TCP/UDP listeners, binding scope, plaintext-service port hints,
+  UFW state, and separate IPv4/IPv6 base INPUT policy snapshots. These are not
+  remote-reachability tests or complete firewall-rule simulations.
+* **Services:** running/enabled services and sockets, selected legacy-service
+  names, and failed service inventory on systemd hosts.
 
 The primary target is Ubuntu/Debian. Other distributions and containers may
 produce `UNKNOWN` or `SKIP`; support must be verified before relying on results.

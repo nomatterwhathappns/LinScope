@@ -41,6 +41,18 @@ class AccountsTests(unittest.TestCase):
         results = accounts.run(AccountContext(sudoers=PermissionError("denied")))
         self.assertEqual(next(f.status for f in results if f.id == "ACCT-005"), "UNKNOWN")
 
+    def test_blank_shell_defaults_to_interactive_shell(self):
+        results = accounts.run(AccountContext(passwd="root:x:0:0::/root:/bin/bash\nsvc:x:100:100::/srv/svc:\n"))
+        self.assertEqual(next(f.status for f in results if f.id == "ACCT-003"), "WARN")
+
+    def test_username_beginning_with_root_is_not_root(self):
+        results = accounts.run(AccountContext(sudoers="rootops ALL=(ALL:ALL) ALL\n"))
+        self.assertIn("/etc/sudoers:1", next(f.evidence for f in results if f.id == "ACCT-006"))
+
+    def test_inline_comment_not_passwordless_policy(self):
+        results = accounts.run(AccountContext(sudoers="operator ALL=(ALL) ALL # avoid NOPASSWD: here\n"))
+        self.assertEqual(next(f.status for f in results if f.id == "ACCT-005"), "INFO")
+
 
 if __name__ == "__main__":
     unittest.main()
