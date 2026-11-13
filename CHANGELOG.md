@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3
+
+* Complete 12-category scope with scheduled tasks, filesystem and MAC modules.
+* Check lexical and resolved task/unit-file ancestors; select mount options
+  using resolved paths so symlink targets cannot inherit the wrong verdict.
+* Scope AppArmor/SELinux findings to available controls, and preserve container
+  namespace/UID-mapping uncertainty.
+
 ## 1.2
 
 * Add live kernel/sysctl, Debian/Ubuntu package-cache, and logging/audit checks.

@@ -35,7 +35,7 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage through v1.2
+## Coverage through v1.3
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
@@ -59,6 +59,12 @@ linscope --version
   and reboot-marker hints. No metadata is downloaded and no CVEs are inferred.
 * **Logging:** common logging services, journald storage/retention configuration,
   log-directory/rotation configuration permissions, auditd, and reported time sync.
+* **Scheduled tasks:** system cron/task metadata and direct root executable
+  paths, plus system timer/service unit metadata; includes resolved ancestors.
+* **Filesystem:** effective backing mount options for temporary directories,
+  ownership/sticky bits, and fstab permissions; handles directory symlinks.
+* **Mandatory access control:** available LSMs, AppArmor profile modes, SELinux
+  enforcement, and persistent SELinux configuration. Both are not required.
 
 The primary target is Ubuntu/Debian. Other distributions and containers may
 produce `UNKNOWN` or `SKIP`; support must be verified before relying on results.
