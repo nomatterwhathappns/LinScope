@@ -67,51 +67,33 @@ class AccountBoundsRegressions(unittest.TestCase):
 
 class CommandLimitsRegressions(unittest.TestCase):
     def test_timeout_is_incomplete_evidence_even_when_partial_output_exists(self):
-        timeout = subprocess.TimeoutExpired(["fixture-tool"], 0.1, output=b"PASS", stderr=b"partial")
-        with patch("linscope.core.shutil.which", return_value="/usr/bin/fixture-tool"), \
-                patch("linscope.core.subprocess.run", side_effect=timeout) as runner:
-            result = Context().command(["fixture-tool", "--read-only"], timeout=0.1)
+        result = Context().command([sys.executable, "-c", "import sys,time; print('partial',flush=True); time.sleep(30)"], timeout=0.5)
         self.assertFalse(result.ok)
         self.assertIsNone(result.returncode)
-        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stdout, "partial\n")
         self.assertIn("timed out", result.error)
-        self.assertEqual(runner.call_args.kwargs["timeout"], 0.1)
-        self.assertFalse(runner.call_args.kwargs.get("shell", False))
 
     def test_oversized_stdout_or_stderr_is_not_clean_evidence(self):
         for channel in ("stdout", "stderr"):
             with self.subTest(channel=channel):
-                def fake_run(argv, **kwargs):
-                    kwargs[channel].write(b"x" * 1_048_577)
-                    return subprocess.CompletedProcess(argv, 0)
-                with patch("linscope.core.shutil.which", return_value="/usr/bin/fixture-tool"), \
-                        patch("linscope.core.subprocess.run", side_effect=fake_run):
-                    result = Context().command(["fixture-tool"])
-                self.assertEqual(result.returncode, 0)
+                code = f"import sys; sys.{channel}.buffer.write(b'x' * 1_048_577)"
+                result = Context().command([sys.executable, "-c", code])
                 self.assertFalse(result.ok)
                 self.assertIn("exceeded", result.error)
                 self.assertEqual(len(getattr(result, channel)), 1_048_576)
 
     def test_exact_output_limit_is_valid_and_command_result_is_cached(self):
-        def fake_run(argv, **kwargs):
-            kwargs["stdout"].write(b"x" * 1_048_576)
-            return subprocess.CompletedProcess(argv, 0)
-        with patch("linscope.core.shutil.which", return_value="/usr/bin/fixture-tool"), \
-                patch("linscope.core.subprocess.run", side_effect=fake_run) as runner:
+        args = [sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'x' * 1_048_576)"]
+        with patch("linscope.core.subprocess.Popen", wraps=subprocess.Popen) as runner:
             ctx = Context()
-            first = ctx.command(["fixture-tool"])
-            second = ctx.command(["fixture-tool"])
+            first = ctx.command(args)
+            second = ctx.command(args)
         self.assertTrue(first.ok)
         self.assertIs(first, second)
         self.assertEqual(runner.call_count, 1)
 
     def test_nonzero_exit_cannot_be_clean_despite_positive_stdout(self):
-        def fake_run(argv, **kwargs):
-            kwargs["stdout"].write(b"PASS")
-            return subprocess.CompletedProcess(argv, 1)
-        with patch("linscope.core.shutil.which", return_value="/usr/bin/fixture-tool"), \
-                patch("linscope.core.subprocess.run", side_effect=fake_run):
-            result = Context().command(["fixture-tool"])
+        result = Context().command([sys.executable, "-c", "import sys; print('PASS'); sys.exit(1)"])
         self.assertFalse(result.ok)
         self.assertEqual(result.returncode, 1)
 

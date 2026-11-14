@@ -1,5 +1,5 @@
 """The explicit built-in registry keeps report scope and releases reproducible."""
-from linscope.checks import accounts, acl, authentication, docker, filesystem, kernel, logging, mac, network, packages, permissions, scheduled, services, ssh, sudo, systemd, userfiles
+from linscope.checks import accounts, acl, authentication, capabilities, docker, filesystem, kernel, logging, mac, network, packages, permissions, scheduled, services, ssh, sudo, systemd, userfiles
 
 CHECKS = {
     "ssh": ssh.run,
@@ -19,4 +19,5 @@ CHECKS = {
     "systemd": systemd.run,
     "docker": docker.run,
     "userfiles": userfiles.run,
+    "capabilities": capabilities.run,
 }

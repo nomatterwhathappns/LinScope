@@ -12,6 +12,7 @@ import json
 import re
 
 from linscope.core import Finding, unavailable
+from linscope.rules import DEFAULT_BASELINES
 
 _USER = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*\$?", re.ASCII)
 _HOST = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,252}", re.ASCII)
@@ -76,8 +77,8 @@ def _baseline(ctx):
     raw = getattr(ctx, "baseline", {})
     if not isinstance(raw, dict):
         raise ValueError("Baseline must be an object")
-    root = raw.get("SSH-001", {"allowed": ["no"]})
-    attempts = raw.get("SSH-005", {"max_attempts": 4})
+    root = raw.get("SSH-001", DEFAULT_BASELINES["SSH-001"])
+    attempts = raw.get("SSH-005", DEFAULT_BASELINES["SSH-005"])
     if (not isinstance(root, dict) or set(root) != {"allowed"}
             or not isinstance(root["allowed"], list) or not root["allowed"]
             or any(not isinstance(v, str) or v not in _ROOT_VALUES for v in root["allowed"])):

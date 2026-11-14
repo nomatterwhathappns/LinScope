@@ -13,7 +13,7 @@ import stat
 PROFILES = ("server", "desktop", "router", "container")
 CATEGORIES = ("ssh", "accounts", "permissions", "authentication", "network",
               "services", "kernel", "packages", "logging", "scheduled",
-              "filesystem", "mac", "acl", "sudo", "systemd", "docker", "userfiles")
+              "filesystem", "mac", "acl", "sudo", "systemd", "docker", "userfiles", "capabilities")
 _CHECK_ID = re.compile(r"^[A-Z][A-Z0-9_]*(?:-[A-F0-9]{12})?-[0-9]{3,}$")
 _USER = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}\$?")
 

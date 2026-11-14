@@ -3,11 +3,21 @@
 History order is save time encoded in filenames, not untrusted report metadata.
 Only anchored LinScope filenames are considered. Corrupt or unsafe history
 entries are reported rather than silently disappearing from comparisons.
+
+Snapshot data is fsynced under a hidden temporary name, then published using
+Linux renameat2(RENAME_NOREPLACE). This requires a supporting Linux kernel,
+filesystem, and libc (the Ubuntu/Debian target); unsupported platforms fail
+explicitly instead of falling back to an overwriting rename. Crashes before
+publication can leave hidden temporary files, which are not report candidates.
+Directory fsync follows publication; failure there leaves a complete report
+visible but cannot confirm its durability across a subsequent power loss.
 """
 from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
+import ctypes
+import errno
 import fcntl
 import json
 import os
@@ -17,6 +27,7 @@ import stat
 import uuid
 
 from linscope.reporting import _findings
+from linscope.rules import rules_compatible
 
 MAX_REPORT_BYTES = 8_388_608
 MAX_CANDIDATES = 500
@@ -119,8 +130,70 @@ def _reports(directory_fd):
         yield name, _read_report(directory_fd, name)
 
 
+def _rename_noreplace(directory_fd, temporary_name, final_name):
+    """Atomically move a single-link snapshot without replacing any pathname.
+
+    Keep libc lookup lazy so reading/comparing history does not require this
+    optional platform operation. Both names are locally generated basenames
+    anchored to the same already-open, owner-only directory descriptor.
+    """
+    try:
+        library = ctypes.CDLL(None, use_errno=True)
+        renameat2 = library.renameat2
+    except (AttributeError, OSError) as exc:
+        raise OSError(errno.ENOTSUP,
+                      "Atomic no-replace history publication is unavailable in this libc") from exc
+    renameat2.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int,
+                          ctypes.c_char_p, ctypes.c_uint)
+    renameat2.restype = ctypes.c_int
+    ctypes.set_errno(0)
+    result = renameat2(directory_fd, os.fsencode(temporary_name), directory_fd,
+                       os.fsencode(final_name), 1)  # Linux RENAME_NOREPLACE.
+    if result != 0:
+        number = ctypes.get_errno() or errno.EIO
+        if number == errno.EEXIST:
+            raise FileExistsError(number, "History snapshot name already exists", final_name)
+        if number in (errno.ENOSYS, errno.EINVAL, errno.ENOTSUP):
+            raise OSError(number,
+                          "Atomic no-replace history publication is unsupported by this kernel/filesystem")
+        raise OSError(number, "Atomic history publication failed: " + os.strerror(number))
+
+
+def _write_temporary(directory_fd, encoded):
+    """Write only a noncandidate name; never expose partially written JSON."""
+    for _ in range(3):
+        name = f".linscope-pending-{uuid.uuid4().hex}.tmp"
+        try:
+            fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                         0o600, dir_fd=directory_fd)
+        except FileExistsError:
+            continue
+        stream = None
+        try:
+            stream = os.fdopen(fd, "wb")
+            with stream:
+                os.fchmod(stream.fileno(), 0o600)
+                stream.write(encoded)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except BaseException:
+            if stream is None:
+                # fdopen did not transfer ownership to a file object.
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            try:
+                os.unlink(name, dir_fd=directory_fd)
+            except OSError:
+                pass
+            raise
+        return name
+    raise FileExistsError("Unable to allocate a unique temporary history filename")
+
+
 def save_report(directory, report) -> Path:
-    """Save a complete report exclusively at mode 0600 in a private directory."""
+    """Publish a complete snapshot atomically at mode 0600, without overwrite."""
     try:
         snapshot = deepcopy(report)
         _validate_report(snapshot)
@@ -131,10 +204,10 @@ def save_report(directory, report) -> Path:
     if len(encoded) > MAX_REPORT_BYTES:
         raise ValueError("Report exceeds the 8 MiB history limit")
     path, directory_fd = _open_directory(directory, create=True)
-    name = None
+    temporary_name = None
     try:
         # Lock the directory inode, not a replaceable lockfile. Independent
-        # opens in other processes/threads block until the complete write and
+        # opens in other processes/threads block until publication and directory
         # fsync finish; closing the descriptor releases the advisory lock.
         fcntl.flock(directory_fd, fcntl.LOCK_EX)
         count = 0
@@ -142,30 +215,30 @@ def save_report(directory, report) -> Path:
             count += 1
         if count >= MAX_CANDIDATES:
             raise ValueError(f"History already contains {MAX_CANDIDATES} reports; archive older reports explicitly")
+        temporary_name = _write_temporary(directory_fd, encoded)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         for _ in range(3):
             name = f"linscope-{stamp}-{uuid.uuid4().hex}.json"
             try:
-                fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
-                             0o600, dir_fd=directory_fd)
+                _rename_noreplace(directory_fd, temporary_name, name)
             except FileExistsError:
                 continue
+            # The rename is the visibility commit point. Never remove the
+            # published final file if the subsequent directory fsync fails.
+            temporary_name = None
             try:
-                with os.fdopen(fd, "wb") as stream:
-                    os.fchmod(stream.fileno(), 0o600)
-                    stream.write(encoded)
-                    stream.flush()
-                    os.fsync(stream.fileno())
                 os.fsync(directory_fd)
-            except BaseException:
-                try:
-                    os.unlink(name, dir_fd=directory_fd)
-                except OSError:
-                    pass
-                raise
+            except OSError as exc:
+                raise OSError(exc.errno or errno.EIO,
+                              "History snapshot was published, but directory durability could not be confirmed") from exc
             return path / name
         raise FileExistsError("Unable to allocate a unique history filename")
     finally:
+        if temporary_name is not None:
+            try:
+                os.unlink(temporary_name, dir_fd=directory_fd)
+            except OSError:
+                pass
         os.close(directory_fd)
 
 
@@ -205,6 +278,8 @@ def latest_compatible(directory, report) -> dict | None:
             if saved.get("scope") != report.get("scope"):
                 continue
             if "scope" not in saved and {f["category"] for f in saved["findings"]} != {f["category"] for f in report["findings"]}:
+                continue
+            if not rules_compatible(saved, report):
                 continue
             if result is None:
                 result = saved

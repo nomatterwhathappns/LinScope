@@ -46,7 +46,7 @@ python -m pip install -e .
 linscope --version
 ```
 
-## Coverage through v1.7
+## Coverage through v1.8
 
 * **SSH:** effective default configuration via `sshd -T`, including normal
   `Include` expansion; root/password/empty-password login, key authentication,
@@ -79,7 +79,8 @@ linscope --version
   enforcement, and persistent SELinux configuration. Both are not required.
 
 * **POSIX ACLs:** effective named/group access under the ACL mask on protected
-  targets, plus directory default-inheritance review.
+  system files, host keys, user credentials, Docker socket, cron and systemd
+  unit files; includes default inheritance and lexical/resolved parent ACLs.
 * **Effective sudo:** noninteractive evaluated policy listings for selected
   users; passwordless and broad-command review without running any grant or
   collecting raw permitted command arguments.
@@ -90,6 +91,9 @@ linscope --version
   and configured user, using only whitelisted fields.
 * **User files:** metadata for the invoking user's SSH/credential configuration
   and optional explicit paths, including lexical/resolved ancestor permissions.
+* **File capabilities:** bounded conventional executable-directory inventory,
+  separate permitted/effective/inheritable sets and namespace root IDs; grants
+  request review rather than proving exploitability.
 
 The primary target is Ubuntu/Debian. Other distributions and containers may
 produce `UNKNOWN` or `SKIP`; support must be verified before relying on results.
@@ -116,8 +120,11 @@ before applying a recommendation. Some changes can disrupt authentication or
 applications; LinScope applies none automatically.
 
 `--deep` enables filesystem searches under `/usr/bin`, `/usr/sbin`, `/etc`,
-and `/usr/local/bin`, without crossing mount boundaries. Commands have timeouts
-and output limits. A failed/partial collection is not reported as clean.
+and `/usr/local/bin`, without crossing mount boundaries. Capability discovery
+also uses `/usr/local/sbin`; default capability scans visit direct regular files
+and `--deep` recurses. Command stdout/stderr are each limited to 1 MiB while
+running, with timeout/output-limit termination of the invocation process group.
+A failed/partial collection is not reported as clean.
 
 Report files are created with mode 0600 and cannot overwrite existing files.
 They may include hostnames, usernames, paths, and listening addresses. The
@@ -225,6 +232,31 @@ details. Display filters never change canonical JSON/history or exit gates.
 History is opt-in, private, and locally stored. See [Terminal usage](docs/CLI.md)
 for scope, compatibility, limits, and examples.
 
+## Assessment-rule identity
+
+Every new scan records a `rules` manifest: revision, selected categories/profile,
+effective default and custom values for supported configurable baselines, and
+SHA256 source identities for the full built-in assessment pack and shared engine.
+Defaults come from the same constants used by SSH/package checks.
+
+```bash
+linscope --category capabilities
+linscope --category acl --user-path /home/alice/.ssh/id_ed25519
+linscope --history-dir reports/history --compare-latest --summary
+```
+
+If an authentication limit changes from 4 to 6 while the host remains at 5, the
+new PASS cannot be counted as verified remediation against the old WARN: the
+rules differ. Changed, missing, or incomplete identities require a new compatible
+baseline. `--fail-on-unknown` also catches incomplete rule-source identities.
+
+Fingerprints identify code/configuration and are not digital signatures or proof
+of report authenticity. Hashing the whole pack is deliberately conservative:
+even a formatting change or an unrelated built-in helper edit can require a new
+baseline. Older pairs without rule metadata remain readable/comparable, but
+their comparison explicitly sets `rules_verified=false` and is labeled unverified.
+A legacy report cannot be compared as equivalent to a new verified scan.
+
 ## Development
 
 ```bash
@@ -240,7 +272,7 @@ release; validate on your target VM before operational use.
 
 ## Checkpoint workflow
 
-All checkpoints are on `main`, tagged sequentially from `v1.0` through `v1.7`.
+All checkpoints are on `main`, tagged sequentially from `v1.0` through `v1.8`.
 To study a completed version without moving main:
 
 ```bash

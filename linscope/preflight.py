@@ -30,6 +30,7 @@ CATEGORY_TOOLS = {
     "systemd": ("systemctl",),
     "docker": ("docker",),
     "userfiles": (),
+    "capabilities": ("getcap", "find"),
 }
 
 # category, path, access required by collectors: content, directory, or metadata.

@@ -59,6 +59,7 @@ Semua checkpoint tetap ada di branch `main`; tag menandai snapshot-nya.
 | `v1.5` | Konteks SSH Match, ACL, sudo efektif, baseline yang bisa diatur |
 | `v1.6` | Filter tampilan, preflight, riwayat, laporan HTML interaktif |
 | `v1.7` | Hardening service systemd, Docker, metadata credential milik user |
+| `v1.8` | Batas output langsung, riwayat atomik, ACL lebih luas, identitas aturan, file capabilities |
 
 Gunakan versi terbaru untuk pemakaian; versi lama adalah checkpoint belajar
 dan belum memiliki seluruh perbaikan yang ada di versi terakhir.
@@ -107,3 +108,17 @@ sebelum menambah banyak pemeriksaan.
 
 Kalau lo bisa menjelaskan ini sambil menunjukkan kode dan tesnya, project ini
 mulai menjadi bukti pemahaman infrastructure security lo.
+
+## Tambahan v1.8
+
+Coba `linscope --category capabilities` untuk melihat executable yang mendapat
+hak tambahan. Ini bisa membantu enumerasi lokal di lab HTB yang sedang lo
+kerjakan, tetapi bukan bukti otomatis adanya jalur privilege escalation.
+Perhatikan permitted/effective/inheritable dan namespace root ID pada evidence.
+
+Untuk memahami pengetatan internal, baca `core.py` (output dibatasi selama
+proses berjalan), `history.py` (tulis lengkap sebelum nama laporan dipublikasikan),
+dan `rules.py` (mencatat standar penilaian). Contoh penting: mesin bernilai 5
+bisa berubah dari WARN menjadi PASS jika batas default diubah dari 4 ke 6,
+walaupun mesinnya tidak diubah. Identitas aturan yang berbeda mencegah perubahan
+itu dihitung sebagai perbaikan yang terverifikasi.

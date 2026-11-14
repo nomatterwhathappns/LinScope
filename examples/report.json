@@ -2,7 +2,7 @@
   "schema_version": 1,
   "tool": {
     "name": "LinScope",
-    "version": "1.7"
+    "version": "1.8"
   },
   "generated_at": "2026-11-14T00:00:00+00:00",
   "host": {
@@ -15,6 +15,7 @@
     "checks": [
       "accounts",
       "authentication",
+      "capabilities",
       "filesystem",
       "kernel",
       "logging",
@@ -136,7 +137,100 @@
       "severity": "info",
       "evidence": "SYNTHETIC: SELinux is not active; this example host uses AppArmor.",
       "recommendation": "Review AppArmor confinement and workload coverage separately."
+    },
+    {
+      "id": "CAPS-15F06CEF0127-001",
+      "category": "capabilities",
+      "title": "File capability metadata: /usr/local/bin/example-helper",
+      "status": "WARN",
+      "severity": "high",
+      "evidence": "SYNTHETIC: permitted=cap_setuid; effective=cap_setuid; inheritable=none; namespace rootid=not explicitly reported. Runtime effects and exploitability were not tested.",
+      "recommendation": "Review whether the program requires this capability and verify provenance, permissions and namespace behavior."
     }
   ],
-  "policy_warnings": []
+  "policy_warnings": [],
+  "rules": {
+    "revision": "1.8.0",
+    "profile": "server",
+    "categories": [
+      "accounts",
+      "authentication",
+      "capabilities",
+      "filesystem",
+      "kernel",
+      "logging",
+      "mac",
+      "network",
+      "packages",
+      "permissions",
+      "scheduled",
+      "services",
+      "ssh"
+    ],
+    "builtin_categories": [
+      "accounts",
+      "acl",
+      "authentication",
+      "capabilities",
+      "docker",
+      "filesystem",
+      "kernel",
+      "logging",
+      "mac",
+      "network",
+      "packages",
+      "permissions",
+      "scheduled",
+      "services",
+      "ssh",
+      "sudo",
+      "systemd",
+      "userfiles"
+    ],
+    "effective_baselines": {
+      "SSH-001": {
+        "allowed": [
+          "no"
+        ]
+      },
+      "SSH-005": {
+        "max_attempts": 4
+      },
+      "PACKAGES-002": {
+        "max_age_days": 7
+      }
+    },
+    "source_sha256": {
+      "checks/__init__.py": "94fa12614196e1b73dcd5262e51a7cd1a6b70a3988c7b9319850a69013f37468",
+      "checks/accounts.py": "78f05e5ad57ba354ff4223496350b2981280cc58b69eba64afd1414ab8bf9659",
+      "checks/acl.py": "8c140cf445095b4a229b7fa0421e87aa3acd13181dbbec382d9da360e6ae4a2a",
+      "checks/authentication.py": "c75059169996068ecc4cb809e14f31299f2add0a44c463670eea7e14a3ff4145",
+      "checks/capabilities.py": "b51ae52676b9a50fb0be44331073b9816cba2ce5ac1f6a0db60feda27180aa0c",
+      "checks/docker.py": "bfbae3b1b404f6251a5036f155883292b89d6cd10bb1944a78d905fa51df3973",
+      "checks/filesystem.py": "23453277fe7bfeeee79a13be18d0bab05d8790006770c724dc753ce502fba7a7",
+      "checks/kernel.py": "255ee9b30e0c50cf642f2eb95bc25ddd1ed0e43b4f630e15cd8a15333cb317d5",
+      "checks/logging.py": "3a9a2db3e4124a37b938034380e270d91ca0af97d104966925f4749104f47e25",
+      "checks/mac.py": "2eb2ef4fe7ce94a3cb964eade89195c23e082449fe9ec73a3b4479f23ef1398f",
+      "checks/network.py": "1d438fd6a07bc33f54adf5f48ba41be3774f69ebcc3387528231eda7f82cc1bc",
+      "checks/packages.py": "13e476adb5ddc16fda17b5d2baa6b8e8ccda95606e0582ef8e522c589fe82f97",
+      "checks/permissions.py": "c5251ea6de5e90e23fc37ed6c5fe07048474ac1af9be1e0e02f50983a7238517",
+      "checks/scheduled.py": "6df38aa55c6b67cf28bb7d72222f1ade12124e95c6b394c70359f12ee1b2e432",
+      "checks/services.py": "951076408015fadd4cf866a4bce54b4d64ba4ad02c5585c925f7a6b92cec09e0",
+      "checks/ssh.py": "e62054fa05f0f68855948f5b56eb11a5d4cb5e96a1930954108035129f549ad4",
+      "checks/sudo.py": "fde4b211865ae5679987b5e1b69e6b2ad6da71dbdfe36729c19f3bbc584e7edb",
+      "checks/systemd.py": "c620113faeff57f1ca0f03bfc134ad7155db8901b80aa8786d55459abf84b361",
+      "checks/userfiles.py": "7ed000cdf70baab4a81fad74f19f3dcf57b92da926b1d1b0535a8ca0bb966914",
+      "cli.py": "7210fa75f42518eef14d5d026a3373d83fa463a8f1581d832a0faf8de9476f3e",
+      "core.py": "f52d080826fe90b47bddf339d4367a20a973d8e41abda5e543c1a0b305e87c75",
+      "history.py": "c9b6bdc8f1191dfa8238d41ed7413cb932d9cb17c8f5247a85997d8b70f6d868",
+      "policy.py": "5c3d98a40e48f39ea66ffedb25536f5c287910f5b62e7b83d70353be39b53525",
+      "registry.py": "f736148a0132d0a2f73e4ad0a6dcdd74fcc3b968fcb00733edb893acc5015a89",
+      "reporting.py": "bc135ca5d920948cf5b04620270e7aa98e12d1500218da7e81d63e57f7eebc32",
+      "rules.py": "edeaa3694e4636caf15af161e19b6432bda55cfff28f7a56a39994ee181abe6b"
+    },
+    "unavailable_sources": [],
+    "stable": true,
+    "complete": true,
+    "fingerprint": "d6d4fe00e60ea4f2100899ccae1d8d50a223990dc2bf744faad4cc69d66e01c9"
+  }
 }

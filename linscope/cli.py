@@ -15,9 +15,11 @@ from linscope.policy import apply_exceptions, load_policy, parse_ssh_context, va
 from linscope.registry import CHECKS
 from linscope.preflight import inspect_capabilities, render_preflight_text
 from linscope.reporting import _plain, compare_reports, render_html, render_json, render_text
+from linscope.rules import build_rules_snapshot, mark_rules_unstable
 
 
 def collect(ctx, categories):
+    initial_rules = build_rules_snapshot(ctx, categories)
     findings = []
     for number, category in enumerate(categories, 1):
         if getattr(ctx, "progress", False):
@@ -42,10 +44,15 @@ def collect(ctx, categories):
         "findings": [finding.to_dict() for finding in findings],
     }
     parameters = {key: getattr(ctx, key) for key in ("baseline", "ssh_contexts", "sudo_users", "user_paths", "service_units") if getattr(ctx, key, None)}
-    if "userfiles" in categories or ("sudo" in categories and not getattr(ctx, "sudo_users", None)):
+    if "acl" in categories or "userfiles" in categories or ("sudo" in categories and not getattr(ctx, "sudo_users", None)):
         parameters["identity_uid"] = os.getuid()
     if parameters:
         report["scope"]["parameters"] = parameters
+    report["rules"] = build_rules_snapshot(ctx, categories)
+    if initial_rules["fingerprint"] != report["rules"]["fingerprint"]:
+        report["rules"] = mark_rules_unstable(report["rules"])
+    if not report["rules"]["complete"]:
+        report["policy_warnings"] = ["Rule source identity is incomplete or changed during collection; this snapshot cannot be used for a verified rule comparison."]
     return report
 
 
@@ -68,6 +75,8 @@ def load_report(path):
 
 def render_comparison(comparison):
     lines = ["LinScope / Report comparison", " | ".join(f"{k}: {v}" for k, v in comparison["summary"].items()), ""]
+    if comparison.get("rules_verified") is False:
+        lines.append("Legacy comparison: assessment rules are unverified; status changes do not establish verified remediation.")
     for group in ("new", "resolved", "changed", "missing"):
         lines.append(group.upper())
         for item in comparison[group]:
@@ -104,7 +113,7 @@ def main(argv=None):
     parser.add_argument("--format", choices=("text", "json", "html"), default="text")
     parser.add_argument("--output", metavar="PATH", help="Create a private report file; existing files are never overwritten.")
     parser.add_argument("--fail-on", choices=SEVERITIES[1:], help="Exit 1 for WARN/FAIL at this severity or higher.")
-    parser.add_argument("--fail-on-unknown", action="store_true", help="Exit 2 when any check has UNKNOWN coverage.")
+    parser.add_argument("--fail-on-unknown", action="store_true", help="Exit 2 when checks or recorded rule identities have incomplete coverage.")
     parser.add_argument("--policy", metavar="JSON", help="Load declarative profile/categories and expiring exceptions.")
     parser.add_argument("--ssh-context", action="append", metavar="USER_ADDR_HOST", help="Evaluate SSH Match context: user=alice,addr=192.0.2.1,host=client.example (repeatable).")
     parser.add_argument("--sudo-user", action="append", metavar="USER", help="List effective sudo policy for a selected user without executing grants (repeatable).")
@@ -193,7 +202,7 @@ def main(argv=None):
             report["findings"] = apply_exceptions(report["findings"], policy)
             emitted = {f["id"] for f in report["findings"]}
             unmatched = sorted(set(policy.get("exceptions", {})) - emitted)
-            report["policy_warnings"] = [f"Exception {check_id} was not evaluated: ID absent from the selected report (excluded scope, unavailable evidence, or a typo)." for check_id in unmatched]
+            report.setdefault("policy_warnings", []).extend(f"Exception {check_id} was not evaluated: ID absent from the selected report (excluded scope, unavailable evidence, or a typo)." for check_id in unmatched)
         if args.compare_latest:
             previous = latest_compatible(args.history_dir, report)
             if previous is None:
@@ -217,7 +226,8 @@ def main(argv=None):
     except (OSError, ValueError, RecursionError) as exc:
         print(_plain(f"linscope: {exc}"), file=sys.stderr)
         return 2
-    if args.fail_on_unknown and any(f["status"] == "UNKNOWN" for f in report["findings"]):
+    if args.fail_on_unknown and (any(f["status"] == "UNKNOWN" for f in report["findings"])
+                                 or report.get("rules", {}).get("complete") is False):
         return 2
     if args.fail_on:
         threshold = SEVERITIES.index(args.fail_on)

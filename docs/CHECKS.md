@@ -1,6 +1,6 @@
 # Check catalog
 
-Seventeen categories, with stable IDs for both checks and inventory findings. Some
+Eighteen categories, with stable IDs for both checks and inventory findings. Some
 IDs are conditional: SSH-000 replaces unavailable/default-path SSH evaluation.
 A numeric ID count is not a measure of coverage or host security. See the module
 docstrings and emitted evidence for each check's exact scope.
@@ -171,24 +171,33 @@ Select categories using `--category NAME` (repeatable), or list them with
 ## Collection limits
 
 Commands normally time out after 8 seconds; package simulation and deep file
-searches allow 15 seconds. Collected stdout/stderr and configuration files are
-limited to 1 MiB each. Globs cap matches at 500 and inspected directory entries
+searches allow 15 seconds. Command stdout/stderr are live-limited to 1 MiB per channel in memory;
+configuration files are limited to 1 MiB each. Globs cap matches at 500 and inspected directory entries
 at 20,000. System timer metadata is limited to 50 units. Truncation, ambiguity,
 and failed collection remain visible rather than producing a clean result.
 
 Deep search is optional and limited to documented directories. No full-disk,
-remote port, application vulnerability, cloud IAM, or effective ACL scan is
-performed. Report scope records category selection and whether deep search ran.
+remote port, application vulnerability, cloud IAM, or exhaustive filesystem
+ACL scan is performed. Report scope records category selection and whether deep search ran.
 
 ## acl
 
 [Implementation](../linscope/checks/acl.py)
 
-`ACL-<12 uppercase hex>-001` evaluates mask-aware target access for conventional
-passwd/group/shadow/gshadow/sudoers/sshd_config and the SSH directory. The target
-hash is SHA256 of its absolute path, truncated to twelve uppercase hex digits.
-`-002` reviews directory default ACL inheritance. Group membership, parent ACLs,
-NFSv4 ACLs, and alternate locations are outside this category.
+`ACL-<12 uppercase hex>-001` evaluates mask-aware target access; `-002`
+reviews directory default inheritance and `-003` reviews lexical/resolved parent
+ACL protection. The hash is SHA256 of its absolute path, truncated to twelve
+uppercase hex digits. Existing IDs remain stable. `ACL-000` records discovery
+scope and omitted/inaccessible sources.
+
+Targets include conventional protected files, SSH host keys, invoking-user
+credentials/explicit paths, the conventional Docker socket, cron tasks, and
+systemd service/timer fragment/drop-in paths. Bounds: 200 direct targets, 256
+unique parent ACL paths, 200 unit paths, 130 unit queries, and 2,048 ACL entries
+per parsed document. Omissions and failed discovery are UNKNOWN. Remote ACL
+models, full NSS membership, every task dependency and all custom paths remain
+outside scope. No target contents are opened; `/etc/group` may be read to
+establish trusted shadow-group metadata.
 
 ## sudo
 
@@ -251,3 +260,22 @@ candidates excluding public files, AWS credentials, kubeconfig, Docker config,
 and Google ADC. No contents are opened. Explicit selections retain known-path
 baselines; extra files use a private baseline and extra directories require
 owner-only access. ACLs and actual credential validity are outside this category.
+
+## capabilities
+
+[Implementation](../linscope/checks/capabilities.py)
+
+`CAPS-000` records bounded inventory coverage; `CAPS-<12HEX>-001` reviews one
+file's capability metadata. The hash derives from the normalized absolute path.
+Permitted/effective/inheritable sets and namespace root ID are separate. Selected
+high-impact grants emit WARN; other metadata is informational. No discovered
+program is executed or opened, and metadata alone does not establish exploitability.
+
+`find -H` visits conventional executable roots without crossing mount boundaries;
+command-line directory symlinks may be followed, descendant symlinks are not.
+Default depth is direct regular files, with recursive coverage only for --deep.
+Up to 10,000 candidate files and 200 reported capability records are retained;
+queries batch at most 128 paths and 32 KiB argument estimates. Unsupported names,
+numbers, ambiguous filenames, query diagnostics even on exit zero, and incomplete
+collection stay visible. Package provenance and runtime capability effects need
+separate review.

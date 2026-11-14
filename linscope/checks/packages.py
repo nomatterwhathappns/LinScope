@@ -10,8 +10,9 @@ import re
 import time
 
 from linscope.core import Finding, unavailable
+from linscope.rules import DEFAULT_BASELINES
 
-CACHE_MAX_AGE = 7 * 86400
+CACHE_MAX_AGE = DEFAULT_BASELINES["PACKAGES-002"]["max_age_days"] * 86400
 
 
 def _supported(ctx):
@@ -34,7 +35,7 @@ def _cache(ctx):
     baseline = getattr(ctx, "baseline", {})
     if not isinstance(baseline, dict):
         return None, "Package baseline must be an object"
-    config = baseline.get("PACKAGES-002", {"max_age_days": 7})
+    config = baseline.get("PACKAGES-002", DEFAULT_BASELINES["PACKAGES-002"])
     if (not isinstance(config, dict) or set(config) != {"max_age_days"}
             or type(config["max_age_days"]) is not int or not 1 <= config["max_age_days"] <= 365):
         return None, "PACKAGES-002 max_age_days must be an integer in 1..365"

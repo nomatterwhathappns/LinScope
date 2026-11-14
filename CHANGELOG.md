@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.8
+
+* Stream command output with a live 1 MiB limit per channel, a monotonic deadline,
+  and process-group cleanup on overflow/timeout/interruption. No output capture
+  files are written, and malformed UTF-8 remains incomplete evidence.
+* Write history under private hidden names, fsync data, and atomically publish
+  with Linux renameat2 NOREPLACE. Preserve complete published reports on a later
+  directory-sync failure and report unsupported atomic-publication platforms.
+* Expand POSIX ACL review to host keys, user credentials, Docker socket,
+  scheduled/system service paths and lexical/resolved parent directories.
+* Record rule revision, effective default/custom configurable baselines, and
+  source fingerprints for the full built-in rule pack. Prevent incompatible
+  rule identities from being treated as comparable remediation evidence.
+* Add bounded file-capability inventory with permitted/effective/inheritable
+  sets, namespace root IDs, and explicit incomplete-collection coverage.
+* Retain legacy report reading/comparison with a visible unverified-rules label;
+  verified snapshots never mix with legacy or incomplete identities.
+
 ## 1.7
 
 * Expand to 17 categories with systemd service-hardening properties, conventional

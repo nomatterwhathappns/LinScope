@@ -10,12 +10,15 @@ import json
 import re
 
 from linscope.core import SEVERITIES, STATUSES
+from linscope.rules import rules_compatible, validate_rules_snapshot
 
 
 def _findings(report: dict) -> list[dict]:
     if (not isinstance(report, dict) or type(report.get("schema_version")) is not int
             or report["schema_version"] != 1):
         raise ValueError("Unsupported report schema; expected schema_version 1")
+    if "rules" in report:
+        validate_rules_snapshot(report["rules"])
     if not isinstance(report.get("tool", {}), dict):
         raise ValueError("Report tool metadata must be an object")
     if "name" in report.get("tool", {}) and (not isinstance(report["tool"]["name"], str) or not report["tool"]["name"]):
@@ -32,6 +35,8 @@ def _findings(report: dict) -> list[dict]:
                 or set(comparison["summary"]) != keys
                 or any(type(value) is not int or value < 0 for value in comparison["summary"].values())):
             raise ValueError("Report comparison requires non-negative integer new/resolved/changed/missing summary counts")
+        if "rules_verified" in comparison and type(comparison["rules_verified"]) is not bool:
+            raise ValueError("Comparison rules_verified must be a boolean")
     if "scope" in report:
         scope = report["scope"]
         if (not isinstance(scope, dict) or not {"checks", "deep"} <= set(scope)
@@ -51,6 +56,18 @@ def _findings(report: dict) -> list[dict]:
     if not isinstance(host, dict) or not all(isinstance(host.get(k), str) and host[k]
                                               for k in ("name", "system", "profile")):
         raise ValueError("Report host requires name, system, and profile strings")
+    if "rules" in report:
+        if report["rules"]["profile"] != host["profile"]:
+            raise ValueError("Rules profile does not match report host profile")
+        if "scope" in report and report["rules"]["categories"] != sorted(report["scope"]["checks"]):
+            raise ValueError("Rules categories do not match report collection scope")
+        scoped = report.get("scope", {}).get("parameters", {})
+        if "baseline" in scoped:
+            from linscope.policy import validate_baseline
+            overrides = validate_baseline(scoped["baseline"])
+            effective = report["rules"]["effective_baselines"]
+            if any(value != effective[check_id] for check_id, value in overrides.items() if check_id in effective):
+                raise ValueError("Scoped baseline overrides contradict recorded effective rules")
     findings = report.get("findings")
     if not isinstance(findings, list):
         raise ValueError("Report findings must be a list")
@@ -150,11 +167,17 @@ def render_text(report: dict, *, statuses=None, categories=None, min_severity=No
              f"Host: {host['name']} | Profile: {host['profile']} | Generated: {report.get('generated_at', 'unknown')}",
              " | ".join(f"{status}: {counts[status]}" for status in STATUSES),
              f"Full report: {len(findings)} findings | Current view: {len(selected)} | Sort: {sort_by}", ""]
+    if "rules" in report:
+        rules = report["rules"]
+        lines.extend([f"Assessment rules: {rules['revision']} | SHA256 {rules['fingerprint']} | complete={rules['complete']}",
+                      "Effective configurable baselines: " + json.dumps(rules["effective_baselines"], sort_keys=True, ensure_ascii=True), ""])
     if "history_note" in report:
         lines.append(f"History: {report['history_note']}")
     if "comparison" in report:
         summary = report["comparison"]["summary"]
         lines.append("Previous compatible report: " + " | ".join(f"{key}: {summary[key]}" for key in ("new", "resolved", "changed", "missing")))
+        if report["comparison"].get("rules_verified") is False:
+            lines.append("Legacy comparison: assessment rules are unverified; status changes do not establish verified remediation.")
     if "history_note" in report or "comparison" in report:
         lines.append("")
     if counts["UNKNOWN"]:
@@ -306,6 +329,15 @@ def render_html(report: dict, *, statuses=None, categories=None, min_severity=No
         summary = report["comparison"]["summary"]
         comparison_html = ('<aside class="notice"><strong>Previous compatible report</strong>: '
                            + " · ".join(f"{key}: {summary[key]}" for key in ("new", "resolved", "changed", "missing")) + "</aside>")
+        if report["comparison"].get("rules_verified") is False:
+            comparison_html += '<p class="sub">Legacy comparison: assessment rules are unverified; status changes do not establish verified remediation.</p>'
+    rules_html = ""
+    if "rules" in report:
+        rules = report["rules"]
+        rules_html = ('<details open class="notice"><summary>Assessment rules: ' + esc(rules["revision"]) + '</summary>'
+                      + '<p>SHA256: ' + esc(rules["fingerprint"]) + '; complete=' + str(rules["complete"]) + '</p>'
+                      + '<pre>' + esc(json.dumps(rules["effective_baselines"], sort_keys=True, indent=2)) + '</pre>'
+                      + '<small>Identity of selected rules and configuration; this is not a digital signature.</small></details>')
     for index, finding in enumerate(ordered, 1):
         exception_html = ""
         if "exception" in finding:
@@ -368,7 +400,7 @@ footer{{margin-top:32px;font-size:12px;color:var(--muted)}}@media(max-width:800p
 <section class="metrics" aria-label="Full-report finding totals">{tiles}</section>
 <aside class="notice">Totals cover the full report. Filters affect display only. All {len(findings)} findings and their evidence remain in this file.
 UNKNOWN means evidence could not be established. SKIP includes inapplicable or explicitly disabled checks; neither establishes safety.</aside>
-{comparison_html}{coverage}{warnings_html}
+{rules_html}{comparison_html}{coverage}{warnings_html}
 <section class="tools" aria-label="Report display controls"><div class="tool-grid">
 <label for="search">Search findings<input id="search" type="search" placeholder="ID, title, evidence, recommendation"></label>
 <label for="category">Category<select id="category"><option value="" data-mode="all">All categories</option>{category_options}</select></label>
@@ -400,6 +432,8 @@ def compare_reports(old: dict, new: dict) -> dict:
             raise ValueError(f"Cannot compare different host {key} values")
     if old.get("scope") != new.get("scope"):
         raise ValueError("Cannot compare reports with different collection scopes")
+    if not rules_compatible(old, new):
+        raise ValueError("Cannot compare reports with different or unverified assessment rules; establish a new baseline")
     # Reports predating explicit scope still need comparable category selections.
     if "scope" not in old and {f["category"] for f in old_findings} != {f["category"] for f in new_findings}:
         raise ValueError("Cannot compare reports with different category selections")
@@ -423,4 +457,5 @@ def compare_reports(old: dict, new: dict) -> dict:
         else:
             result["changed"].append(change)
     result["summary"] = {key: len(value) for key, value in result.items()}
+    result["rules_verified"] = "rules" in old and "rules" in new
     return result

@@ -33,21 +33,33 @@ footer{margin-top:32px;font-size:12px;color:var(--muted)}@media(max-width:800px)
 <div class="metadata"><span><strong>Host</strong> synthetic-demo-host</span><span><strong>Profile</strong> server</span>
 <span><strong>System</strong> Linux example-kernel</span>
 <span><strong>Generated</strong> 2026-11-14T00:00:00+00:00</span>
-<span><strong>Version</strong> 1.7</span></div></header>
-<section class="metrics" aria-label="Full-report finding totals"><div class="metric pass"><strong>5</strong><span>PASS</span></div><div class="metric warn"><strong>2</strong><span>WARN</span></div><div class="metric fail"><strong>0</strong><span>FAIL</span></div><div class="metric unknown"><strong>2</strong><span>UNKNOWN</span></div><div class="metric skip"><strong>1</strong><span>SKIP</span></div><div class="metric info"><strong>2</strong><span>INFO</span></div></section>
-<aside class="notice">Totals cover the full report. Filters affect display only. All 12 findings and their evidence remain in this file.
+<span><strong>Version</strong> 1.8</span></div></header>
+<section class="metrics" aria-label="Full-report finding totals"><div class="metric pass"><strong>5</strong><span>PASS</span></div><div class="metric warn"><strong>3</strong><span>WARN</span></div><div class="metric fail"><strong>0</strong><span>FAIL</span></div><div class="metric unknown"><strong>2</strong><span>UNKNOWN</span></div><div class="metric skip"><strong>1</strong><span>SKIP</span></div><div class="metric info"><strong>2</strong><span>INFO</span></div></section>
+<aside class="notice">Totals cover the full report. Filters affect display only. All 13 findings and their evidence remain in this file.
 UNKNOWN means evidence could not be established. SKIP includes inapplicable or explicitly disabled checks; neither establishes safety.</aside>
-<aside class="coverage"><strong>Coverage warning</strong>: 2 UNKNOWN finding(s) in the full report. Missing evidence does not establish safety.</aside>
+<details open class="notice"><summary>Assessment rules: 1.8.0</summary><p>SHA256: d6d4fe00e60ea4f2100899ccae1d8d50a223990dc2bf744faad4cc69d66e01c9; complete=True</p><pre>{
+  &quot;PACKAGES-002&quot;: {
+    &quot;max_age_days&quot;: 7
+  },
+  &quot;SSH-001&quot;: {
+    &quot;allowed&quot;: [
+      &quot;no&quot;
+    ]
+  },
+  &quot;SSH-005&quot;: {
+    &quot;max_attempts&quot;: 4
+  }
+}</pre><small>Identity of selected rules and configuration; this is not a digital signature.</small></details><aside class="coverage"><strong>Coverage warning</strong>: 2 UNKNOWN finding(s) in the full report. Missing evidence does not establish safety.</aside>
 <section class="tools" aria-label="Report display controls"><div class="tool-grid">
 <label for="search">Search findings<input id="search" type="search" placeholder="ID, title, evidence, recommendation"></label>
-<label for="category">Category<select id="category"><option value="" data-mode="all">All categories</option><option value="accounts">accounts</option><option value="authentication">authentication</option><option value="filesystem">filesystem</option><option value="kernel">kernel</option><option value="logging">logging</option><option value="mac">mac</option><option value="network">network</option><option value="packages">packages</option><option value="permissions">permissions</option><option value="scheduled">scheduled</option><option value="services">services</option><option value="ssh">ssh</option></select></label>
+<label for="category">Category<select id="category"><option value="" data-mode="all">All categories</option><option value="accounts">accounts</option><option value="authentication">authentication</option><option value="capabilities">capabilities</option><option value="filesystem">filesystem</option><option value="kernel">kernel</option><option value="logging">logging</option><option value="mac">mac</option><option value="network">network</option><option value="packages">packages</option><option value="permissions">permissions</option><option value="scheduled">scheduled</option><option value="services">services</option><option value="ssh">ssh</option></select></label>
 <label for="severity">Minimum severity<select id="severity"><option value="0">Info and above</option><option value="1">Low and above</option><option value="2">Medium and above</option><option value="3">High and above</option><option value="4">Critical and above</option></select></label>
 <label for="sort">Sort by<select id="sort"><option value="id">Check ID</option><option value="severity">Severity</option><option value="status">Status</option><option value="category">Category</option></select></label>
 </div><fieldset><legend>Statuses to show</legend><label><input type="checkbox" name="status" value="PASS" checked> PASS</label><label><input type="checkbox" name="status" value="WARN" checked> WARN</label><label><input type="checkbox" name="status" value="FAIL" checked> FAIL</label><label><input type="checkbox" name="status" value="UNKNOWN" checked> UNKNOWN</label><label><input type="checkbox" name="status" value="SKIP" checked> SKIP</label><label><input type="checkbox" name="status" value="INFO" checked> INFO</label></fieldset>
 <div class="actions"><label><input id="summary-only" type="checkbox"> Summary only</label><button id="reset-view" type="button">Show all / reset</button><button id="expand-all" type="button">Expand details</button><button id="collapse-all" type="button">Collapse details</button></div></section>
-<p class="view-count" id="view-count" role="status">Requested view: 12 / 12 findings. Full evidence is shown until local display controls are enabled.</p>
+<p class="view-count" id="view-count" role="status">Requested view: 13 / 13 findings. Full evidence is shown until local display controls are enabled.</p>
 <p class="nojs">JavaScript is optional. Without it, all findings and open details remain available; browser search still works.</p>
-<section class="priority" aria-label="Priority review"><h2>Priority review</h2><p class="sub">Up to five WARN/FAIL findings from the current view, ordered by severity. This is not an overall security score.</p><ol id="priority-list"><li>SSH-001 / HIGH / WARN: Root SSH login</li><li>LOGGING-002 / MEDIUM / WARN: Journald persistent-storage configuration</li></ol></section>
+<section class="priority" aria-label="Priority review"><h2>Priority review</h2><p class="sub">Up to five WARN/FAIL findings from the current view, ordered by severity. This is not an overall security score.</p><ol id="priority-list"><li>CAPS-15F06CEF0127-001 / HIGH / WARN: File capability metadata: /usr/local/bin/example-helper</li><li>SSH-001 / HIGH / WARN: Root SSH login</li><li>LOGGING-002 / MEDIUM / WARN: Journald persistent-storage configuration</li></ol></section>
 <p id="empty-view" hidden>No findings match the current display filters. Reset the view to see the complete report.</p>
 <section id="findings" aria-label="Findings"><article id="finding-1" class="finding" data-check-id="ACCT-001" data-category="accounts" data-status="PASS" data-severity="critical" data-rank="4">
 <div class="finding-top"><span class="badge pass">PASS</span>
@@ -59,52 +71,57 @@ UNKNOWN means evidence could not be established. SKIP includes inapplicable or e
 <span class="eyebrow">AUTHENTICATION-004 · authentication · info</span></div>
 <h2>PAM failed-login controls review</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: A faillock module reference exists; enforcement was not established.</dd>
-<dt>Recommendation</dt><dd>Review the complete PAM sequence and lockout options.</dd></dl></details></article><article id="finding-3" class="finding" data-check-id="FILESYSTEM-003" data-category="filesystem" data-status="PASS" data-severity="info" data-rank="0">
+<dt>Recommendation</dt><dd>Review the complete PAM sequence and lockout options.</dd></dl></details></article><article id="finding-3" class="finding" data-check-id="CAPS-15F06CEF0127-001" data-category="capabilities" data-status="WARN" data-severity="high" data-rank="3">
+<div class="finding-top"><span class="badge warn">WARN</span>
+<span class="eyebrow">CAPS-15F06CEF0127-001 · capabilities · high</span></div>
+<h2>File capability metadata: /usr/local/bin/example-helper</h2><details open><summary>Evidence and recommendation</summary>
+<dl><dt>Evidence</dt><dd>SYNTHETIC: permitted=cap_setuid; effective=cap_setuid; inheritable=none; namespace rootid=not explicitly reported. Runtime effects and exploitability were not tested.</dd>
+<dt>Recommendation</dt><dd>Review whether the program requires this capability and verify provenance, permissions and namespace behavior.</dd></dl></details></article><article id="finding-4" class="finding" data-check-id="FILESYSTEM-003" data-category="filesystem" data-status="PASS" data-severity="info" data-rank="0">
 <div class="finding-top"><span class="badge pass">PASS</span>
 <span class="eyebrow">FILESYSTEM-003 · filesystem · info</span></div>
 <h2>Mount restrictions for /dev/shm</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: nodev,nosuid,noexec observed on the resolved mount.</dd>
-<dt>Recommendation</dt><dd>Verify application compatibility and intended mount configuration.</dd></dl></details></article><article id="finding-4" class="finding" data-check-id="KERNEL-001" data-category="kernel" data-status="PASS" data-severity="medium" data-rank="2">
+<dt>Recommendation</dt><dd>Verify application compatibility and intended mount configuration.</dd></dl></details></article><article id="finding-5" class="finding" data-check-id="KERNEL-001" data-category="kernel" data-status="PASS" data-severity="medium" data-rank="2">
 <div class="finding-top"><span class="badge pass">PASS</span>
 <span class="eyebrow">KERNEL-001 · kernel · medium</span></div>
 <h2>IPv4 packet forwarding</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: net.ipv4.ip_forward=0; expected 0 for server profile.</dd>
-<dt>Recommendation</dt><dd>Use a router profile only when routing is intended.</dd></dl></details></article><article id="finding-5" class="finding" data-check-id="LOGGING-002" data-category="logging" data-status="WARN" data-severity="medium" data-rank="2">
+<dt>Recommendation</dt><dd>Use a router profile only when routing is intended.</dd></dl></details></article><article id="finding-6" class="finding" data-check-id="LOGGING-002" data-category="logging" data-status="WARN" data-severity="medium" data-rank="2">
 <div class="finding-top"><span class="badge warn">WARN</span>
 <span class="eyebrow">LOGGING-002 · logging · medium</span></div>
 <h2>Journald persistent-storage configuration</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: Storage=volatile.</dd>
-<dt>Recommendation</dt><dd>Choose retention appropriate for investigation needs.</dd></dl></details></article><article id="finding-6" class="finding" data-check-id="MAC-003" data-category="mac" data-status="SKIP" data-severity="info" data-rank="0">
+<dt>Recommendation</dt><dd>Choose retention appropriate for investigation needs.</dd></dl></details></article><article id="finding-7" class="finding" data-check-id="MAC-003" data-category="mac" data-status="SKIP" data-severity="info" data-rank="0">
 <div class="finding-top"><span class="badge skip">SKIP</span>
 <span class="eyebrow">MAC-003 · mac · info</span></div>
 <h2>SELinux runtime enforcement</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: SELinux is not active; this example host uses AppArmor.</dd>
-<dt>Recommendation</dt><dd>Review AppArmor confinement and workload coverage separately.</dd></dl></details></article><article id="finding-7" class="finding" data-check-id="NETWORK-002" data-category="network" data-status="INFO" data-severity="info" data-rank="0">
+<dt>Recommendation</dt><dd>Review AppArmor confinement and workload coverage separately.</dd></dl></details></article><article id="finding-8" class="finding" data-check-id="NETWORK-002" data-category="network" data-status="INFO" data-severity="info" data-rank="0">
 <div class="finding-top"><span class="badge info">INFO</span>
 <span class="eyebrow">NETWORK-002 · network · info</span></div>
 <h2>Non-loopback bindings review</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: One TCP listener binds a wildcard address. This is not proof of Internet reachability.</dd>
-<dt>Recommendation</dt><dd>Check intended interfaces and effective access controls.</dd></dl></details></article><article id="finding-8" class="finding" data-check-id="PACKAGES-003" data-category="packages" data-status="UNKNOWN" data-severity="medium" data-rank="2">
+<dt>Recommendation</dt><dd>Check intended interfaces and effective access controls.</dd></dl></details></article><article id="finding-9" class="finding" data-check-id="PACKAGES-003" data-category="packages" data-status="UNKNOWN" data-severity="medium" data-rank="2">
 <div class="finding-top"><span class="badge unknown">UNKNOWN</span>
 <span class="eyebrow">PACKAGES-003 · packages · medium</span></div>
 <h2>Pending package upgrades</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: Cache freshness could not be established.</dd>
-<dt>Recommendation</dt><dd>Review package metadata through the normal maintenance process.</dd></dl></details></article><article id="finding-9" class="finding" data-check-id="PERM-003" data-category="permissions" data-status="PASS" data-severity="high" data-rank="3">
+<dt>Recommendation</dt><dd>Review package metadata through the normal maintenance process.</dd></dl></details></article><article id="finding-10" class="finding" data-check-id="PERM-003" data-category="permissions" data-status="PASS" data-severity="high" data-rank="3">
 <div class="finding-top"><span class="badge pass">PASS</span>
 <span class="eyebrow">PERM-003 · permissions · high</span></div>
 <h2>Protected file: /etc/shadow</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: uid=0, gid=42 (shadow), mode=0640.</dd>
-<dt>Recommendation</dt><dd>Keep credential-file access restricted; no hashes were collected.</dd></dl></details></article><article id="finding-10" class="finding" data-check-id="SCHEDULED-005" data-category="scheduled" data-status="UNKNOWN" data-severity="info" data-rank="0">
+<dt>Recommendation</dt><dd>Keep credential-file access restricted; no hashes were collected.</dd></dl></details></article><article id="finding-11" class="finding" data-check-id="SCHEDULED-005" data-category="scheduled" data-status="UNKNOWN" data-severity="info" data-rank="0">
 <div class="finding-top"><span class="badge unknown">UNKNOWN</span>
 <span class="eyebrow">SCHEDULED-005 · scheduled · info</span></div>
 <h2>System timer unit permissions</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: Insufficient permission to inspect unit metadata.</dd>
-<dt>Recommendation</dt><dd>Rerun with appropriate read permissions; do not treat missing evidence as safe.</dd></dl></details></article><article id="finding-11" class="finding" data-check-id="SERVICES-003" data-category="services" data-status="PASS" data-severity="medium" data-rank="2">
+<dt>Recommendation</dt><dd>Rerun with appropriate read permissions; do not treat missing evidence as safe.</dd></dl></details></article><article id="finding-12" class="finding" data-check-id="SERVICES-003" data-category="services" data-status="PASS" data-severity="medium" data-rank="2">
 <div class="finding-top"><span class="badge pass">PASS</span>
 <span class="eyebrow">SERVICES-003 · services · medium</span></div>
 <h2>Legacy remote-service review</h2><details open><summary>Evidence and recommendation</summary>
 <dl><dt>Evidence</dt><dd>SYNTHETIC: No match in the selected legacy-unit name list.</dd>
-<dt>Recommendation</dt><dd>Review custom services and other activation mechanisms separately.</dd></dl></details></article><article id="finding-12" class="finding" data-check-id="SSH-001" data-category="ssh" data-status="WARN" data-severity="high" data-rank="3">
+<dt>Recommendation</dt><dd>Review custom services and other activation mechanisms separately.</dd></dl></details></article><article id="finding-13" class="finding" data-check-id="SSH-001" data-category="ssh" data-status="WARN" data-severity="high" data-rank="3">
 <div class="finding-top"><span class="badge warn">WARN</span>
 <span class="eyebrow">SSH-001 · ssh · high</span></div>
 <h2>Root SSH login</h2><details open><summary>Evidence and recommendation</summary>
